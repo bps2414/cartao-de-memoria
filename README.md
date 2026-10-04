@@ -1,11 +1,11 @@
 <p align="center"><img src="docs/logo.svg" width="96" alt=""></p>
 
-# Cartão de Memória
+# Memcard
 
 **Português** · [English](README.en.md)
 
-Backup automático e versionado dos saves de um PS5 com jailbreak para um
-computador da sua rede, com interface web.
+Um cartão de memória para o seu PS5: backup automático e versionado dos saves
+de um console com jailbreak para um computador da sua rede, com interface web.
 
 ![Tela dos cartões: um cartão por perfil, um bloco por jogo](docs/screenshot.png)
 
@@ -37,8 +37,8 @@ Para restaurar um save você também vai querer o
 ## Instalação
 
 ```sh
-git clone https://github.com/bps2414/cartao-de-memoria.git
-cd cartao-de-memoria
+git clone https://github.com/bps2414/memcard.git
+cd memcard
 cp config.example.toml config.toml
 cp .env.example .env
 ```

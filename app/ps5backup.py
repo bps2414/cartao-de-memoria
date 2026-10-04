@@ -65,7 +65,7 @@ DEFAULTS = {
 MINIMUMS = {"watch_interval_seconds": 10, "probe_interval_seconds": 5, "offline_after_failures": 1, "keep_min_versions": 1,
             "ftp_port": 1, "garlic_port": 1, "now_playing_minutes": 1}
 # Avatar das mensagens no Discord (precisa ser uma URL pública; o Discord não lê SVG).
-AVATAR_URL = "https://raw.githubusercontent.com/bps2414/cartao-de-memoria/main/docs/logo.png"
+AVATAR_URL = "https://raw.githubusercontent.com/bps2414/memcard/main/docs/logo.png"
 
 log = logging.getLogger("ps5backup")
 # Estado em memória do daemon, lido pela interface web.
@@ -249,7 +249,7 @@ def send_embed(embed, message_id=None):
             text = "\n".join(x for x in (embed["title"], embed.get("description", "")) if x)
             _http("POST", url, text.encode(), "text/plain; charset=utf-8")
             return None
-        body = json.dumps({"username": "Cartão de Memória", "avatar_url": AVATAR_URL,
+        body = json.dumps({"username": "Memcard", "avatar_url": AVATAR_URL,
                            "embeds": [embed]}).encode()
         base = url.split("?")[0]
         if message_id:

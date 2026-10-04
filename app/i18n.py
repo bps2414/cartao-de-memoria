@@ -47,7 +47,7 @@ TEXT = {
                        "(arquivo corrompido ou ausente). Nada foi apagado. Veja Registro › Integridade.",
         "verify_more": "… e mais {n}",
         "f_intact": "Versões íntegras",
-        "test_title": "🎮  Teste do Cartão de Memória",
+        "test_title": "🎮  Teste do Memcard",
         "test_body": "Se você está lendo isto, os avisos estão chegando.",
         # erros da API
         "e_not_found": "não encontrado",
@@ -113,7 +113,7 @@ TEXT = {
                        "(corrupted or missing file). Nothing was deleted. See Log › Integrity.",
         "verify_more": "… and {n} more",
         "f_intact": "Intact versions",
-        "test_title": "🎮  Cartão de Memória test",
+        "test_title": "🎮  Memcard test",
         "test_body": "If you can read this, notifications are working.",
         "e_not_found": "not found",
         "e_bad_path": "invalid path",

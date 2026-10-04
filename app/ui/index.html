@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cartão de Memória</title>
+<title>Memcard</title>
 <link rel="icon" type="image/svg+xml" href="/logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -230,7 +230,7 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><img src="/mark.svg" alt="">Cartão de Memória</div>
+    <div class="brand"><img src="/mark.svg" alt="">Memcard</div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="cards" aria-selected="true" data-i18n="tab_cards">Cartões</button>
       <button role="tab" data-tab="stats" aria-selected="false" data-i18n="tab_stats">Painel</button>
@@ -603,7 +603,7 @@ function renderProjection() {
   const year = p.projected["365"], share = year / (p.free_bytes + p.now_bytes) * 100;
   const basis = p.window_days === 1 ? t("proj_today_basis") : t("proj_days_basis", { n: p.window_days });
   const pace = p.copies_per_day
-    ? t("proj_pace", { basis, copies: nf(p.copies_per_day, 1), size: gb(p.raw_bytes_per_day) })
+    ? t("proj_pace", { basis, copies: nf(p.copies_per_day, Number.isInteger(p.copies_per_day) ? 0 : 1), size: gb(p.raw_bytes_per_day) })
     : t("proj_idle", { basis });
   box.innerHTML = `<h3>${t("proj_title")}</h3>
     <p>${pace} ${t("proj_how")}</p>

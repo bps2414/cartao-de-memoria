@@ -1,14 +1,14 @@
 <p align="center"><img src="docs/logo.svg" width="96" alt=""></p>
 
-# Cartão de Memória
+# Memcard
 
 **English** · [Português](README.md)
 
-*Cartão de Memória* is Portuguese for "memory card". It keeps automatic,
-versioned backups of the saves on a jailbroken PS5, stored on a computer in your
-home network, with a web interface.
+A memory card for your PS5: automatic, versioned backups of the saves on a
+jailbroken console, stored on a computer in your home network, with a web
+interface.
 
-![Cards screen: one card per profile, one block per game](docs/screenshot.png)
+![Cards screen: one card per profile, one block per game](docs/screenshot.en.png)
 
 *Sample data. In real use each block shows the game's icon.*
 
@@ -38,8 +38,8 @@ To restore a save you will also want
 ## Installation
 
 ```sh
-git clone https://github.com/bps2414/cartao-de-memoria.git
-cd cartao-de-memoria
+git clone https://github.com/bps2414/memcard.git
+cd memcard
 cp config.example.toml config.toml
 cp .env.example .env
 ```
