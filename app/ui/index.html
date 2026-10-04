@@ -130,6 +130,14 @@ button.block:hover { transform: translateY(-3px); }
   color: var(--text); text-decoration: none; font: 600 12px var(--display); letter-spacing: .05em; text-transform: uppercase; }
 .ver .acts > *:hover { border-color: var(--slot); color: var(--slot); }
 .ver .acts > [aria-pressed=true] { background: var(--slot); border-color: var(--slot); color: #2a1e00; }
+details.save { border-bottom: 1px solid var(--line); }
+details.save summary { list-style: none; cursor: pointer; padding: 13px 26px 13px 0; position: relative; }
+details.save summary::-webkit-details-marker { display: none; }
+details.save summary::after { content: "+"; position: absolute; right: 4px; top: 12px; color: var(--slot); font: 600 18px var(--display); }
+details.save[open] summary::after { content: "–"; }
+details.save summary small { display: block; color: var(--mute); margin-top: 2px; }
+details.save .ver { padding-left: 14px; border-bottom: 0; border-top: 1px solid var(--line); }
+.chip { padding: 2px 7px; border-radius: 6px; background: var(--well); color: var(--mute); font: 400 10px var(--mono); vertical-align: 2px; }
 .note { margin-top: 22px; padding: 14px 16px; border-radius: 12px; background: var(--well); color: var(--mute); font-size: 13.5px; }
 .note a { color: var(--slot); }
 .note ol { margin: 8px 0 0; padding-left: 20px; }
@@ -195,7 +203,7 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
     <section id="tab-cards">
       <div class="cards" id="cards"></div>
       <div class="legend">
-        <span><i></i>Save guardado (o número é a quantidade de versões)</span>
+        <span><i></i>Jogo guardado (o número é a quantidade de saves)</span>
         <span><i class="w"></i>Aguardando a primeira cópia</span>
         <span><i class="o"></i>Fora do backup</span>
         <span><i class="e"></i>Espaço livre</span>
@@ -277,25 +285,30 @@ function render() {
   if (tab === "settings" && !formDirty) renderSettings();
 }
 
+function gamesOf(p) { // agrupa os saves do perfil por jogo
+  const map = new Map();
+  p.saves.forEach(s => { if (!map.has(s.title)) map.set(s.title, []); map.get(s.title).push(s); });
+  return [...map].map(([title, saves]) => ({ title, saves, versions: saves.reduce((n, s) => n + s.versions.length, 0) }));
+}
 function renderCards() {
   if (!data.profiles.length) {
     $("#cards").innerHTML = `<div class="empty">Ainda não li nenhum perfil. Ligue o PS5, rode o desbloqueio com o ftpsrv e toque em “Copiar agora”.</div>`;
     return;
   }
   $("#cards").innerHTML = data.profiles.map(p => {
-    const slots = Math.max(15, Math.ceil(p.saves.length / 5) * 5);
-    const versions = p.saves.reduce((n, s) => n + s.versions.length, 0);
-    const blocks = p.saves.map(s => {
-      const t = data.titles[s.title] || {}, off = !p.included || t.excluded;
-      const cls = off ? "off" : s.versions.length ? "" : "wait";
-      const what = `${gameName(s.title)}: ${s.label || s.name}`;
-      return `<button class="block ${cls}" data-key="${esc(saveKey(s))}" title="${esc(what)}" aria-label="${esc(what)}"
-        ${t.icon ? `style="--art:url(/art/${s.title}/icon0.png)"` : ""}>
-        ${t.icon ? "" : `<span class="ini">${esc(s.title.slice(0, 4))}</span>`}
-        ${s.versions.length ? `<span class="n">${s.versions.length}</span>` : ""}</button>`;
-    }).join("") + `<span class="block"></span>`.repeat(slots - p.saves.length);
-    const foot = p.saves.length
-      ? `${plural(p.saves.length, "save", "saves")} · ${plural(versions, "versão guardada", "versões guardadas")}`
+    const games = gamesOf(p), slots = Math.max(15, Math.ceil(games.length / 5) * 5);
+    const versions = games.reduce((n, g) => n + g.versions, 0);
+    const blocks = games.map(g => {
+      const t = data.titles[g.title] || {}, off = !p.included || t.excluded;
+      const cls = off ? "off" : g.versions ? "" : "wait";
+      const what = `${gameName(g.title)}: ${plural(g.saves.length, "save", "saves")}, ${plural(g.versions, "versão", "versões")}`;
+      return `<button class="block ${cls}" data-key="${esc(p.uid + "/" + g.title)}" title="${esc(what)}" aria-label="${esc(what)}"
+        ${t.icon ? `style="--art:url(/art/${g.title}/icon0.png)"` : ""}>
+        ${t.icon ? "" : `<span class="ini">${esc(g.title.slice(0, 4))}</span>`}
+        <span class="n">${g.saves.length}</span></button>`;
+    }).join("") + `<span class="block"></span>`.repeat(slots - games.length);
+    const foot = games.length
+      ? `${plural(games.length, "jogo", "jogos")} · ${plural(p.saves.length, "save", "saves")} · ${plural(versions, "versão", "versões")}`
       : "Nenhum save neste perfil";
     return `<article class="card ${p.included ? "" : "out"}">
       <div class="card-label">
@@ -308,40 +321,50 @@ function renderCards() {
   }).join("");
 }
 
+const openSaves = new Set(); // saves expandidos na gaveta (sobrevive às atualizações)
 function renderDrawer() {
-  const s = allSaves().find(x => saveKey(x) === openKey);
-  if (!s) return closeDrawer();
-  const t = data.titles[s.title] || {}, off = saveOff(s);
-  const state = !s.versions.length ? (off ? "Fora do backup. Nenhuma versão guardada." : "Aguardando a primeira cópia.")
-    : !s.on_console ? "Não está mais no console. As versões guardadas continuam aqui."
-    : off ? "Fora do backup. As versões antigas continuam guardadas, mas não entram novas."
-    : `Última cópia ${ago(stampDate(s.versions[0].stamp))}.`;
-  const versions = s.versions.map((v, i) => `<div class="ver">
-      <strong>${full(stampDate(v.stamp))}${i === 0 ? ` <span class="tag">mais recente</span>` : ""}</strong>
-      <small>${esc(v.trigger)} · ${mb(v.size)}${v.sub ? " · " + esc(v.sub) : ""} · <span class="mono" title="SHA-256: ${esc(v.sha256)}">${esc(v.sha256.slice(0, 12))}</span></small>
-      <span class="acts"><button data-pin="${v.stamp}" aria-pressed="${v.pinned}" title="Uma versão fixada nunca é apagada pela limpeza.">${v.pinned ? "Fixada" : "Fixar"}</button>
-      <a href="/download/${s.uid}/${s.title}/${encodeURIComponent(s.file)}/${v.stamp}" download>Baixar</a></span>
-    </div>`).join("");
+  const [uid, title] = openKey.split("/");
+  const p = data.profiles.find(x => x.uid === uid), g = p && gamesOf(p).find(x => x.title === title);
+  if (!g) return closeDrawer();
+  const t = data.titles[title] || {}, off = !p.included || t.excluded;
+  const groups = g.saves.map(s => {
+    const state = !s.versions.length ? (off ? "nenhuma versão guardada" : "aguardando a primeira cópia")
+      : !s.on_console ? `${plural(s.versions.length, "versão", "versões")} · não está mais no console`
+      : `${plural(s.versions.length, "versão", "versões")} · última ${ago(stampDate(s.versions[0].stamp))}`;
+    const versions = s.versions.map((v, i) => `<div class="ver">
+        <strong>${full(stampDate(v.stamp))}${i === 0 ? ` <span class="tag">mais recente</span>` : ""}</strong>
+        <small>${esc(v.trigger)} · ${mb(v.size)}${v.sub && v.sub !== v.label ? " · " + esc(v.sub) : ""} · <span class="mono" title="SHA-256: ${esc(v.sha256)}">${esc(v.sha256.slice(0, 12))}</span></small>
+        <span class="acts"><button data-pin="${v.stamp}" data-file="${esc(s.file)}" aria-pressed="${v.pinned}" title="Uma versão fixada nunca é apagada pela limpeza.">${v.pinned ? "Fixada" : "Fixar"}</button>
+        <a href="/download/${s.uid}/${s.title}/${encodeURIComponent(s.file)}/${v.stamp}" download>Baixar</a></span>
+      </div>`).join("");
+    return `<details class="save" data-save="${esc(s.file)}" ${openSaves.has(s.file) ? "open" : ""}>
+      <summary><b>${esc(s.label || s.name)}</b>${s.is_system_copy ? ` <span class="chip">reserva do jogo</span>` : ""}
+        <small>${esc(state)}${s.sub && s.sub !== s.label ? " · " + esc(s.sub) : ""}</small><small class="mono">${esc(s.file)}</small></summary>
+      ${versions || `<div class="ver"><small>Sem versões guardadas.</small></div>`}</details>`;
+  }).join("");
+  const top = $("#drawer").scrollTop;
   $("#drawer").innerHTML = `
-    <div class="art" ${t.pic ? `style="--pic:url(/art/${s.title}/pic0.png)"` : ""}>
+    <div class="art" ${t.pic ? `style="--pic:url(/art/${title}/pic0.png)"` : ""}>
       <button class="x" id="closeDrawer" aria-label="Fechar">×</button>
-      <h3>${esc(gameName(s.title))}</h3>
-      <p>${esc(s.label || s.name)}${s.sub ? " · " + esc(s.sub) : ""}${s.is_system_copy ? " (cópia de segurança do próprio jogo)" : ""}</p>
-      <div class="chips"><span>${esc(s.profile.name)}</span><span>${esc(s.title)}</span>${t.version ? `<span>v${esc(t.version)}</span>` : ""}<span>${esc(s.file)}</span></div>
+      <h3>${esc(gameName(title))}</h3>
+      <p>${plural(g.saves.length, "save", "saves")} de ${esc(p.name)}, ${plural(g.versions, "versão guardada", "versões guardadas")}</p>
+      <div class="chips"><span>${esc(title)}</span>${t.version ? `<span>v${esc(t.version)}</span>` : ""}</div>
     </div>
     <div class="dbody">
-      <div class="row"><span>${esc(state)}</span></div>
+      ${off ? `<div class="row"><span>Fora do backup. As versões antigas continuam guardadas, mas não entram novas.</span></div>` : ""}
       <div class="row"><span>Guardar os saves deste jogo<br><small style="color:var(--mute)">Vale para todos os perfis.</small></span>
-        <label class="sw"><input type="checkbox" data-title="${esc(s.title)}" ${t.excluded ? "" : "checked"}><span></span></label></div>
-      <h4>${s.versions.length ? plural(s.versions.length, "versão guardada", "versões guardadas") : "Sem versões"}</h4>
-      ${versions}
+        <label class="sw"><input type="checkbox" data-title="${esc(title)}" ${t.excluded ? "" : "checked"}><span></span></label></div>
+      <h4>Saves deste jogo</h4>
+      <p style="margin:6px 0 10px;color:var(--mute);font-size:13.5px">Um jogo costuma gravar vários arquivos (perfil, sistema, cada slot). Cada um tem o próprio histórico.</p>
+      ${groups}
       <div class="note"><b>Para restaurar</b>
         <ol><li>Baixe a versão que você quer.</li>
-        <li>Abra o <a href="${esc(data.status.garlic_url)}" target="_blank" rel="noopener">Garlic SaveMgr</a> e use a aba Import no perfil ${esc(s.profile.name)}.</li></ol>
+        <li>Abra o <a href="${esc(data.status.garlic_url)}" target="_blank" rel="noopener">Garlic SaveMgr</a> e use a aba Import no perfil ${esc(p.name)}.</li></ol>
         Esta página nunca grava nada no PS5.</div>
     </div>`;
+  $("#drawer").scrollTop = top;
 }
-function openDrawer(key) { openKey = key; renderDrawer(); $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
+function openDrawer(key) { openKey = key; openSaves.clear(); renderDrawer(); $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
 function closeDrawer() { openKey = null; $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
 
 /* ---------- ajustes ---------- */
@@ -418,11 +441,21 @@ function collectConfig() {
 
 /* ---------- registro ---------- */
 async function renderLog() {
-  const events = allSaves().flatMap(s => s.versions.map(v => ({ s, v }))).sort((a, b) => b.v.stamp.localeCompare(a.v.stamp)).slice(0, 60);
-  const feed = events.length ? `<ul class="feed">${events.map(({ s, v }) => `<li>
-      ${data.titles[s.title]?.icon ? `<img src="/art/${s.title}/icon0.png" alt="">` : `<span class="ph"></span>`}
-      <div><b>${esc(gameName(s.title))}</b> · ${esc(v.label || s.label || s.name)}<small>${esc(s.profile.name)} · ${esc(v.trigger)} · ${mb(v.size)}</small></div>
-      <time title="${full(stampDate(v.stamp))}">${ago(stampDate(v.stamp))}</time></li>`).join("")}</ul>`
+  const events = allSaves().flatMap(s => s.versions.map(v => ({ s, v }))).sort((a, b) => b.v.stamp.localeCompare(a.v.stamp));
+  const groups = [];
+  for (const e of events) { // cópias do mesmo jogo e perfil, com menos de 30 min entre si, viram uma linha
+    const last = groups.at(-1);
+    if (last && last.s.title === e.s.title && last.s.uid === e.s.uid && stampDate(last.oldest) - stampDate(e.v.stamp) < 18e5) {
+      last.count++; last.bytes += e.v.size; last.oldest = e.v.stamp;
+      last.names.set(e.v.label || e.s.label || e.s.name, (last.names.get(e.v.label || e.s.label || e.s.name) || 0) + 1);
+    } else groups.push({ s: e.s, newest: e.v.stamp, oldest: e.v.stamp, count: 1, bytes: e.v.size,
+      names: new Map([[e.v.label || e.s.label || e.s.name, 1]]) });
+  }
+  const feed = groups.length ? `<ul class="feed">${groups.slice(0, 40).map(g => `<li>
+      ${data.titles[g.s.title]?.icon ? `<img src="/art/${g.s.title}/icon0.png" alt="">` : `<span class="ph"></span>`}
+      <div><b>${esc(gameName(g.s.title))}</b> · ${plural(g.count, "cópia", "cópias")}
+        <small>${esc(g.s.profile.name)} · ${mb(g.bytes)} · ${[...g.names].map(([n, c]) => esc(n) + (c > 1 ? " ×" + c : "")).join(", ")}</small></div>
+      <time title="${full(stampDate(g.newest))}">${ago(stampDate(g.newest))}</time></li>`).join("")}</ul>`
     : `<div class="empty">Nenhuma cópia registrada ainda.</div>`;
   let lines = [];
   try { lines = (await (await fetch("/api/log")).json()).lines; } catch (e) {}
@@ -447,8 +480,8 @@ document.addEventListener("click", async e => {
   } else if (el.dataset.key) openDrawer(el.dataset.key);
   else if (el.id === "closeDrawer") closeDrawer();
   else if (el.dataset.pin) {
-    const [uid, title, ...rest] = openKey.split("/"), pinned = el.getAttribute("aria-pressed") !== "true";
-    act(() => post("/api/pin", { uid, title, file: rest.join("/"), stamp: el.dataset.pin, pinned }), pinned ? "Versão fixada" : "Versão liberada");
+    const [uid, title] = openKey.split("/"), pinned = el.getAttribute("aria-pressed") !== "true";
+    act(() => post("/api/pin", { uid, title, file: el.dataset.file, stamp: el.dataset.pin, pinned }), pinned ? "Versão fixada" : "Versão liberada");
   }
   else if (el.id === "go") { await act(() => post("/api/backup"), "Cópia iniciada"); }
   else if (el.id === "saveCfg") { const ok = await act(() => post("/api/config", collectConfig()), "Ajustes salvos"); if (ok) renderSettings(); }
@@ -471,6 +504,10 @@ document.addEventListener("change", e => {
   } else if (el.dataset.path) formDirty = true;
 });
 document.addEventListener("input", e => { if (e.target.dataset.path) formDirty = true; });
+document.addEventListener("toggle", e => {
+  const d = e.target;
+  if (d.dataset?.save) d.open ? openSaves.add(d.dataset.save) : openSaves.delete(d.dataset.save);
+}, true);
 $("#scrim").addEventListener("click", closeDrawer);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
 

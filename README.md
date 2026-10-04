@@ -3,7 +3,7 @@
 Backup automático e versionado dos saves de um PS5 com jailbreak para um
 computador da sua rede, com interface web.
 
-![Tela dos cartões: um cartão por perfil, um bloco por save](docs/screenshot.png)
+![Tela dos cartões: um cartão por perfil, um bloco por jogo](docs/screenshot.png)
 
 *Dados de exemplo. No uso real, cada bloco mostra o ícone do jogo.*
 
@@ -52,10 +52,11 @@ disco, mude `BACKUP_DIR` no `.env`.
 
 ## Usando a interface
 
-**Cartões.** Cada perfil do PS5 é um cartão de memória e cada save é um bloco.
-O número no bloco é quantas versões estão guardadas. O interruptor do cartão
-tira ou coloca o perfil no backup. Clique num bloco para ver as versões, baixar,
-fixar uma versão ou tirar aquele jogo do backup.
+**Cartões.** Cada perfil do PS5 é um cartão de memória e cada jogo é um bloco.
+O número no bloco é quantos saves aquele jogo tem (um jogo costuma gravar vários
+arquivos: perfil, sistema, cada slot). O interruptor do cartão tira ou coloca o
+perfil no backup. Clique num bloco para ver os saves do jogo, o histórico de
+cada um, baixar, fixar uma versão ou tirar o jogo do backup.
 
 **Ajustes.** Tudo é configurável ali e vale na hora, sem reiniciar: gatilhos,
 regras de limpeza, avisos e endereço do console. A interface regrava o
@@ -107,6 +108,7 @@ Travas de segurança:
 
 - As 3 versões mais novas de cada save nunca saem.
 - Versões **fixadas** nunca saem. Fixe o save de antes de um chefe, de um final, de uma decisão.
+- A limpeza só mexe na pasta de backup. No PS5 nada é apagado nem alterado.
 - O que sai vai para `data/trash/` e só é apagado de vez depois de 7 dias. Para
   recuperar, mova a pasta de volta para o mesmo caminho em `data/saves/`.
 - O limite de espaço **só avisa**. Passar dele nunca apaga nada.
