@@ -8,6 +8,7 @@ services:
     environment:
       TZ: ${TZ:-America/Sao_Paulo}
       NOTIFY_URL: ${NOTIFY_URL:-}
+      WEB_PASSWORD: ${WEB_PASSWORD:-}
     ports:
       # Interface web, só na rede local. Não encaminhe esta porta no roteador.
       - "${WEB_PORT:-8765}:8765"

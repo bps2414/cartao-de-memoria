@@ -2,12 +2,17 @@
 
 Só lê e escreve no servidor (config.toml e pasta de backup). Nenhuma rota fala
 com o PS5 além de disparar a mesma rodada de backup somente-leitura do daemon.
-Sem autenticação: pensada para a rede local, não exponha na internet.
+Pensada para a rede local; não exponha na internet. Com WEB_PASSWORD definida
+(no .env), tudo exige login: páginas, API, artes e downloads.
 """
+import hashlib
+import hmac
 import json
+import os
 import re
 import threading
 import time
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -18,6 +23,11 @@ from i18n import LANGS, Msg, tr
 PORT = 8765
 UI_DIR = Path(__file__).parent / "ui"
 UI_FILE = UI_DIR / "index.html"
+LOGIN_FILE = UI_DIR / "login.html"
+COOKIE = "cm_session"
+SESSION_DAYS = 30
+LOGIN_TRIES, LOGIN_WINDOW = 5, 300  # tentativas erradas por endereço antes de bloquear, e por quantos segundos
+_failures = {}  # endereço -> horários das tentativas erradas recentes
 SEGMENT_RE = re.compile(r"[A-Za-z0-9_.\-]+")
 
 
@@ -91,11 +101,40 @@ def overview():
                    and total_bytes > cfg["retention"]["warn_total_gb"] * 1024 ** 3},
         "profiles": profiles, "titles": titles, "config": cfg,
         "webhook": {"set": bool(url), "discord": core.is_discord(url)},
-        "session_open": bool(state["session"]),
+        "session_open": bool(state["session"]), "auth": bool(password()),
         "verify": {"at": state["meta"].get("last_verify"), "ok": state["meta"].get("last_verify_ok", 0),
                    "bad": state["meta"].get("last_verify_bad", [])},
         "projection": projection.cached(cfg),
     }
+
+
+def password():
+    return os.environ.get("WEB_PASSWORD", "")
+
+
+def _sign(expiry):
+    # A chave sai da senha: trocar a senha derruba todas as sessões, e o login
+    # sobrevive a reinícios do container sem guardar nada em disco.
+    key = hashlib.sha256(b"ps5backup-session:" + password().encode()).digest()
+    return hmac.new(key, str(expiry).encode(), "sha256").hexdigest()
+
+
+def make_token(now=None):
+    expiry = int(now or time.time()) + SESSION_DAYS * 86400
+    return f"{expiry}.{_sign(expiry)}"
+
+
+def token_valid(token, now=None):
+    expiry, _, signature = (token or "").partition(".")
+    return (expiry.isdigit() and int(expiry) > (now or time.time())
+            and hmac.compare_digest(signature, _sign(expiry)))
+
+
+def login_blocked(addr, now=None):
+    now = now or time.time()
+    recent = [t for t in _failures.get(addr, []) if now - t < LOGIN_WINDOW]
+    _failures[addr] = recent
+    return len(recent) >= LOGIN_TRIES
 
 
 def set_membership(values, uid, name, present):
@@ -119,12 +158,37 @@ class Handler(BaseHTTPRequestHandler):
     def t(self, key, **kw):
         return tr(self.lang, key, **kw)
 
-    def send_json(self, obj, code=200):
+    def authed(self):
+        if not password():
+            return True
+        cookie = SimpleCookie(self.headers.get("Cookie", "")).get(COOKIE)
+        return bool(cookie) and token_valid(cookie.value)
+
+    def session_cookie(self, token, max_age):
+        return ("Set-Cookie", f"{COOKIE}={token}; Path=/; Max-Age={max_age}; HttpOnly; SameSite=Strict")
+
+    def login(self, body):
+        addr = self.client_address[0]
+        if not password():
+            return self.send_json({"ok": True})
+        if login_blocked(addr):
+            return self.send_json({"error": self.t("e_login_blocked", minutes=LOGIN_WINDOW // 60)}, 429)
+        given = str(body.get("password", ""))
+        if not hmac.compare_digest(given.encode(), password().encode()):
+            _failures.setdefault(addr, []).append(time.time())
+            core.log.warning("interface: senha errada vinda de %s", addr)
+            return self.send_json({"error": self.t("e_login")}, 401)
+        _failures.pop(addr, None)
+        self.send_json({"ok": True}, headers=[self.session_cookie(make_token(), SESSION_DAYS * 86400)])
+
+    def send_json(self, obj, code=200, headers=()):
         body = json.dumps(obj, ensure_ascii=False).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for name, value in headers:
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -147,10 +211,14 @@ class Handler(BaseHTTPRequestHandler):
         parts = [p for p in path.split("/") if p]
         if any(not SEGMENT_RE.fullmatch(p) or ".." in p for p in parts):
             return self.send_json({"error": self.t("e_bad_path")}, 400)
+        if path in ("/logo.svg", "/mark.svg"):  # só a marca, usada também na tela de login
+            return self.send_file(UI_DIR / path[1:], "image/svg+xml", cache=True)
+        if not self.authed():
+            if not parts:
+                return self.send_file(LOGIN_FILE, "text/html; charset=utf-8")
+            return self.send_json({"error": self.t("e_auth")}, 401)
         if not parts:
             return self.send_file(UI_FILE, "text/html; charset=utf-8")
-        if path in ("/logo.svg", "/mark.svg"):
-            return self.send_file(UI_DIR / path[1:], "image/svg+xml", cache=True)
         if path == "/api/overview":
             return self.send_json(overview())
         if path == "/api/stats":
@@ -177,6 +245,14 @@ class Handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(min(length, 1 << 16)) or b"{}")
+            if not isinstance(body, dict):
+                raise Msg("e_send_json")
+            if self.path == "/api/login":
+                return self.login(body)
+            if self.path == "/api/logout":
+                return self.send_json({"ok": True}, headers=[self.session_cookie("", 0)])
+            if not self.authed():
+                return self.send_json({"error": self.t("e_auth")}, 401)
             self.send_json(self.route_post(self.path, body))
         except Msg as e:
             self.send_json({"error": e.text(self.lang)}, 400)

@@ -351,6 +351,9 @@ const I18N = {
     "s_triggers.offline_after_failures": "Considerar desligado depois de (falhas seguidas)",
     "s_triggers.offline_grace_seconds": "Esperar antes de avisar que desligou (segundos)", "s_triggers.offline_grace_seconds_h": "Quedas de rede mais curtas que isso não geram aviso de desligado e ligado.",
     save_settings: "Salvar ajustes",
+    set_access: "Acesso", sign_out: "Sair",
+    access_on: "A interface exige senha, inclusive para a API e os downloads. A senha fica em WEB_PASSWORD, no arquivo .env do servidor; trocar a senha encerra todas as sessões.",
+    access_off: "Sem senha: qualquer aparelho da sua rede abre esta página. Para exigir login, defina WEB_PASSWORD no arquivo .env do servidor e recrie o container.",
 
     nothing: "nada", none: "nenhum", tile_today: "de jogo registrado hoje", tile_days: "nos últimos {n} dias",
     tile_game: "jogo mais ativo", tile_day: "dia mais movimentado",
@@ -462,6 +465,9 @@ const I18N = {
     "s_triggers.offline_after_failures": "Treat it as off after (failed checks in a row)",
     "s_triggers.offline_grace_seconds": "Wait before reporting it as off (seconds)", "s_triggers.offline_grace_seconds_h": "Network drops shorter than this don't trigger off and on notifications.",
     save_settings: "Save settings",
+    set_access: "Access", sign_out: "Sign out",
+    access_on: "The interface requires a password, including the API and downloads. The password lives in WEB_PASSWORD, in the server's .env file; changing it signs everyone out.",
+    access_off: "No password: any device on your network can open this page. To require a login, set WEB_PASSWORD in the server's .env file and recreate the container.",
 
     nothing: "nothing", none: "none", tile_today: "of play recorded today", tile_days: "in the last {n} days",
     tile_game: "most active game", tile_day: "busiest day",
@@ -541,6 +547,7 @@ function toast(msg, err) {
 async function post(path, body = {}) {
   const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Lang": lang }, body: JSON.stringify(body) });
   const j = await r.json();
+  if (r.status === 401) location.reload(); // sessão expirou: o servidor mostra a tela de login
   if (!r.ok) throw new Error(j.error || t("failed"));
   return j;
 }
@@ -550,7 +557,9 @@ async function act(fn, okMsg) {
 }
 async function refresh(force) {
   try {
-    const text = await (await fetch("/api/overview")).text();
+    const r = await fetch("/api/overview");
+    if (r.status === 401) return location.reload();
+    const text = await r.text();
     if (text === lastJSON && !force) return;
     lastJSON = text; data = JSON.parse(text); render();
   } catch (e) { $("#statusline").textContent = t("no_service"); }
@@ -758,6 +767,10 @@ function renderSettings() {
     ${num("triggers.offline_after_failures", 1)}
     ${num("triggers.offline_grace_seconds")}
   </div>
+  <div class="panel"><h3>${t("set_access")}</h3>
+    <p>${data.auth ? t("access_on") : t("access_off")}</p>
+    ${data.auth ? `<button class="btn" id="signOut">${t("sign_out")}</button>` : ""}
+  </div>
   <div class="savebar"><button class="go" id="saveCfg">${t("save_settings")}</button></div>`;
   formDirty = false;
 }
@@ -929,6 +942,7 @@ document.addEventListener("click", async e => {
   else if (el.id === "go") { await act(() => post("/api/backup"), t("t_started")); }
   else if (el.id === "saveCfg") { const ok = await act(() => post("/api/config", collectConfig()), t("t_saved")); if (ok) renderSettings(); }
   else if (el.id === "hookSave") { const ok = await act(() => post("/api/webhook", { url: $("#hook").value }), t("t_hook")); if (ok) renderSettings(); }
+  else if (el.id === "signOut") { await post("/api/logout").catch(() => {}); location.reload(); }
   else if (el.id === "hookTest") act(() => post("/api/webhook/test"), t("t_test"));
   else if (el.id === "verify") {
     verifying = true; $("#verifyOut").textContent = t("verifying");

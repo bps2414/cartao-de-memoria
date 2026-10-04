@@ -222,8 +222,13 @@ docker compose exec ps5-backup ps5backup prune             # apply cleanup now
 
 ## Security
 
-- The interface **has no password**. Use it only on your local network and do
-  not forward port 8765 on your router.
+- By default the interface **has no password**: any device on the local network
+  can open it. To require a login, set `WEB_PASSWORD` in `.env` and run
+  `docker compose up -d`. Once set, everything asks for a login: pages, API and
+  downloads. A session lasts 30 days, and five wrong passwords in a row block
+  further attempts from that device for 5 minutes.
+- Even with a password, use it only on your local network and do not forward
+  port 8765 on your router: the connection is plain HTTP, unencrypted.
 - The PS5's ftpsrv has no password either and gives write access to the console
   to any device on the network. This project only uses the read commands
   (`CWD`, `MLSD`, `RETR`).

@@ -219,8 +219,13 @@ docker compose exec ps5-backup ps5backup prune             # aplicar a limpeza a
 
 ## Segurança
 
-- A interface **não tem senha**. Use só na rede local e não encaminhe a porta
-  8765 no roteador.
+- Por padrão a interface **não tem senha**: qualquer aparelho da rede local abre.
+  Para exigir login, defina `WEB_PASSWORD` no `.env` e rode `docker compose up -d`.
+  Com a senha definida, tudo pede login: páginas, API e downloads. A sessão dura
+  30 dias e cinco senhas erradas seguidas bloqueiam novas tentativas daquele
+  aparelho por 5 minutos.
+- Mesmo com senha, use só na rede local e não encaminhe a porta 8765 no
+  roteador: a conexão é HTTP, sem criptografia.
 - O ftpsrv do PS5 também não tem senha e dá acesso de escrita ao console para
   qualquer aparelho da rede. Este projeto só usa os comandos de leitura
   (`CWD`, `MLSD`, `RETR`).
