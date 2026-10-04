@@ -1,7 +1,9 @@
 services:
   ps5-backup:
+    # Imagem pronta, publicada a cada push na main. Para rodar o código desta pasta
+    # (alterações suas, ou sem acesso ao registro): docker compose up -d --build
+    image: ghcr.io/bps2414/memcard:latest
     build: .
-    image: ps5-backup:local
     container_name: ps5-backup
     restart: unless-stopped
     user: "${PUID:-1000}:${PGID:-1000}"

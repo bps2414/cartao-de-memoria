@@ -46,8 +46,12 @@ cp .env.example .env
 Abra o `config.toml` e troque `host` pelo IP do seu PS5. Depois:
 
 ```sh
-docker compose up -d --build
+docker compose up -d
 ```
+
+Isso baixa a imagem pronta de `ghcr.io/bps2414/memcard` (amd64 e arm64), publicada
+a cada mudança na `main`. Para atualizar depois: `docker compose pull && docker compose up -d`.
+Se preferir construir a partir do código desta pasta, use `docker compose up -d --build`.
 
 Abra `http://<ip-do-computador>:8765`. Com o PS5 ligado e o ftpsrv carregado, a
 primeira cópia acontece sozinha em menos de um minuto.

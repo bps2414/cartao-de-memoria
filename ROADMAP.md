@@ -20,15 +20,14 @@ qualquer coisa que escreva no console entra desligada por padrão.
 - Janela do "jogando agora" configurável.
 - Senha opcional na interface (`WEB_PASSWORD`), cobrindo API e downloads.
 - Resumo semanal no Discord: tempo de jogo por jogo e perfil, e espaço.
+- Imagem pronta no GitHub Container Registry, publicada a cada push na `main`.
 
 ## Próximo
 
 1. **Restauração validada.** Roteiro testado de restaurar um save pelo Garlic
    SaveMgr, com prints, incluindo o caso de outro perfil (resign). Hoje o
    procedimento está descrito, mas não foi exercitado de ponta a ponta.
-2. **Imagem pronta.** Publicar a imagem no GitHub Container Registry para
-   instalar sem `--build`.
-3. **Segunda cópia.** Espelhar a pasta de backup para outro disco ou nuvem
+2. **Segunda cópia.** Espelhar a pasta de backup para outro disco ou nuvem
    (rclone ou restic), já que hoje o histórico vive em um disco só.
 
 ## Depois
