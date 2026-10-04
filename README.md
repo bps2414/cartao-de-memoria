@@ -2,6 +2,8 @@
 
 # Cartão de Memória
 
+**Português** · [English](README.en.md)
+
 Backup automático e versionado dos saves de um PS5 com jailbreak para um
 computador da sua rede, com interface web.
 
@@ -15,6 +17,7 @@ computador da sua rede, com interface web.
 - **Limpeza que não destrói o passado:** versões antigas são rareadas, não zeradas, e passam por uma lixeira.
 - **Avisos no Discord sem enxurrada:** uma mensagem por sessão de jogo, editada no lugar.
 - **Sem dependências:** um container Python só com a biblioteca padrão.
+- **Interface e avisos em português ou inglês.**
 
 > Este projeto serve para guardar os **seus próprios saves**. Ele não copia jogos
 > e não ajuda a desbloquear o console.
@@ -51,6 +54,13 @@ primeira cópia acontece sozinha em menos de um minuto.
 
 Os backups ficam na pasta `data/`, ao lado do projeto. Para guardar em outro
 disco, mude `BACKUP_DIR` no `.env`.
+
+## Idioma
+
+A interface segue o idioma do navegador (português ou inglês) e pode ser trocada
+em **Ajustes › Idioma**; essa escolha fica guardada no navegador. Os avisos do
+Discord usam a chave `language` de `[notify]` (`"pt-BR"` ou `"en"`), que também
+aparece em Ajustes. O registro do serviço e a linha de comando ficam em português.
 
 ## Usando a interface
 

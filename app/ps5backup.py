@@ -26,6 +26,8 @@ import urllib.request
 from contextlib import contextmanager
 from pathlib import Path
 
+from i18n import LANGS, Msg, tr
+
 CONFIG_PATH = Path(os.environ.get("PS5BACKUP_CONFIG", "/config/config.toml"))
 DATA_DIR = Path(os.environ.get("PS5BACKUP_DATA", "/data"))
 SAVES_DIR = DATA_DIR / "saves"
@@ -57,14 +59,12 @@ DEFAULTS = {
                   "keep_daily_days": 14, "keep_weekly_weeks": 12, "keep_min_versions": 3,
                   "min_gap_minutes": 10, "trash_days": 7, "warn_total_gb": 20, "warn_free_gb": 10},
     "notify": {"on_power": True, "on_backup": True, "on_error": True, "on_new_profile": True,
-               "error_cooldown_minutes": 60, "session_gap_hours": 6},
+               "error_cooldown_minutes": 60, "session_gap_hours": 6, "language": "pt-BR"},
 }
 MINIMUMS = {"watch_interval_seconds": 10, "probe_interval_seconds": 5, "offline_after_failures": 1, "keep_min_versions": 1,
             "ftp_port": 1, "garlic_port": 1}
 # Avatar das mensagens no Discord (precisa ser uma URL pública; o Discord não lê SVG).
 AVATAR_URL = "https://raw.githubusercontent.com/bps2414/cartao-de-memoria/main/docs/logo.png"
-TRIGGER_LABEL = {"manual": "Manual", "power_on": "PS5 ligou", "save_changed": "Save alterado",
-                 "schedule": "Agendamento"}
 
 log = logging.getLogger("ps5backup")
 # Estado em memória do daemon, lido pela interface web.
@@ -79,25 +79,27 @@ def validate_config(user):
     for section, defaults in DEFAULTS.items():
         given = user.get(section, {})
         if not isinstance(given, dict):
-            raise ValueError(f"[{section}] precisa ser uma seção")
+            raise Msg("c_section", section=section)
         unknown = set(given) - set(defaults)
         if unknown:
-            raise ValueError(f"chave desconhecida em [{section}]: {sorted(unknown)}")
+            raise Msg("c_unknown", section=section, keys=sorted(unknown))
         cfg[section] = {}
         for key, default in defaults.items():
             value = given.get(key, default)
             if type(value) is not type(default):
-                raise ValueError(f"[{section}] {key}: esperado {type(default).__name__}")
+                raise Msg("c_type", section=section, key=key, type=type(default).__name__)
             if isinstance(value, list) and not all(isinstance(v, str) for v in value):
-                raise ValueError(f"[{section}] {key}: a lista só aceita textos")
+                raise Msg("c_list", section=section, key=key)
             if isinstance(value, int) and not isinstance(value, bool) and value < MINIMUMS.get(key, 0):
-                raise ValueError(f"[{section}] {key}: mínimo {MINIMUMS.get(key, 0)}")
+                raise Msg("c_min", section=section, key=key, min=MINIMUMS.get(key, 0))
             cfg[section][key] = value
     if cfg["filter"]["new_profiles"] not in ("include", "exclude"):
-        raise ValueError('[filter] new_profiles: use "include" ou "exclude"')
+        raise Msg("c_new_profiles")
     for hhmm in cfg["triggers"]["schedule_daily_at"]:
         if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", hhmm):
-            raise ValueError(f"[triggers] schedule_daily_at: horário inválido {hhmm!r} (use HH:MM)")
+            raise Msg("c_hhmm", value=repr(hhmm))
+    if cfg["notify"]["language"] not in LANGS:
+        raise Msg("c_language")
     return cfg
 
 
@@ -283,32 +285,32 @@ def human_duration(seconds):
     return f"{minutes // 60} h {minutes % 60:02d} min" if minutes >= 60 else f"{minutes} min"
 
 
-def session_embed(sess, closed):
+def session_embed(cfg, sess, closed):
+    def t(key, **kw):
+        return tr(cfg["notify"]["language"], key, **kw)
     groups = {}
     for e in sess["entries"].values():
         mark = f"`{e['save']}`" + (f" ×{e['count']}" if e["count"] > 1 else "")
         groups.setdefault((e["game"], e["profile"]), []).append(mark)
     lines = [f"**{game}** · {profile}\n" + " · ".join(saves) for (game, profile), saves in groups.items()]
-    more = f"\n… e mais {len(lines) - 12} jogos" if len(lines) > 12 else ""
+    more = "\n" + t("more_games", n=len(lines) - 12) if len(lines) > 12 else ""
     versions = sum(e["count"] for e in sess["entries"].values())
     size = sum(e["bytes"] for e in sess["entries"].values())
     body = "\n\n".join(lines[:12]) + more
     if closed:
-        fields = [("Duração", human_duration(sess["updated"] - sess["started"])), ("Cópias feitas", versions),
-                  ("Saves", len(sess["entries"])), ("Lido do PS5", f"{size / 1048576:.1f} MB"),
-                  ("Total guardado", f"{(dir_bytes(SAVES_DIR) + dir_bytes(TRASH_DIR)) / 1024 ** 3:.2f} GB")]
-        return make_embed("🔴  PS5 desligado · sessão encerrada",
-                          body or "Nenhum save mudou nesta sessão.", 0x5BE3A0 if versions else 0x95A5A6, fields)
-    checked = ("Última verificação", f"<t:{sess.get('checked', sess['updated'])}:R>")
+        fields = [(t("f_duration"), human_duration(sess["updated"] - sess["started"])), (t("f_copies"), versions),
+                  (t("f_saves"), len(sess["entries"])), (t("f_read"), f"{size / 1048576:.1f} MB"),
+                  (t("f_total"), f"{(dir_bytes(SAVES_DIR) + dir_bytes(TRASH_DIR)) / 1024 ** 3:.2f} GB")]
+        return make_embed(t("off_title"), body or t("off_empty"), 0x5BE3A0 if versions else 0x95A5A6, fields)
+    checked = (t("f_checked"), f"<t:{sess.get('checked', sess['updated'])}:R>")
     if not versions:
-        return make_embed("🟢  PS5 ligado", "Vigiando os saves. Nenhum mudou desde que o console ligou.",
-                          0x7C8CFF, [("Ligado", f"<t:{sess['started']}:R>"), checked])
+        return make_embed(t("on_title"), t("on_body"), 0x7C8CFF, [(t("f_on"), f"<t:{sess['started']}:R>"), checked])
     recent = sorted({f"**{e['game']}** ({e['profile']})" for e in sess["entries"].values()
                      if time.time() - e.get("last", 0) < 900})
-    now_playing = "Agora: " + ", ".join(recent) if recent else "Nenhum save mudou nos últimos 15 minutos."
-    return make_embed("💾  Guardando os saves desta sessão", f"{now_playing}\n\n{body}", 0xFFC53D, [
-        ("Cópias feitas", versions), ("Saves", len(sess["entries"])), ("Lido do PS5", f"{size / 1048576:.1f} MB"),
-        ("Ligado", f"<t:{sess['started']}:R>"), ("Última cópia", f"<t:{sess['updated']}:R>"), checked])
+    now_playing = t("now_playing", games=", ".join(recent)) if recent else t("now_idle", n=15)
+    return make_embed(t("saving_title"), f"{now_playing}\n\n{body}", 0xFFC53D, [
+        (t("f_copies"), versions), (t("f_saves"), len(sess["entries"])), (t("f_read"), f"{size / 1048576:.1f} MB"),
+        (t("f_on"), f"<t:{sess['started']}:R>"), (t("f_last_copy"), f"<t:{sess['updated']}:R>"), checked])
 
 
 def session_start(cfg, state):
@@ -322,7 +324,7 @@ def session_start(cfg, state):
         session_close(cfg, state)
     sess = state["session"] = {"message_id": None, "started": now, "updated": now, "entries": {}}
     if cfg["notify"]["on_power"]:
-        sess["message_id"] = send_embed(session_embed(sess, False))
+        sess["message_id"] = send_embed(session_embed(cfg, sess, False))
 
 
 def session_record(cfg, state, copied, trigger):
@@ -339,10 +341,10 @@ def session_record(cfg, state, copied, trigger):
         e["count"] += 1
         e["bytes"] += c["bytes"]
         e["last"] = now
-    sess["updated"], sess["trigger"] = now, TRIGGER_LABEL.get(trigger, trigger)
+    sess["updated"], sess["trigger"] = now, trigger
     sess["checked"] = sess["edited"] = now
     if cfg["notify"]["on_backup"]:
-        sess["message_id"] = send_embed(session_embed(sess, False), sess["message_id"])
+        sess["message_id"] = send_embed(session_embed(cfg, sess, False), sess["message_id"])
 
 
 def session_refresh(cfg, every=300):
@@ -355,7 +357,7 @@ def session_refresh(cfg, every=300):
             return
         sess["checked"] = sess["edited"] = now
         if cfg["notify"]["on_backup"]:
-            sess["message_id"] = send_embed(session_embed(sess, False), sess["message_id"])
+            sess["message_id"] = send_embed(session_embed(cfg, sess, False), sess["message_id"])
         save_json(STATE_FILE, state)
 
 
@@ -369,10 +371,10 @@ def session_close(cfg, state, ended=None):
     if (cfg["notify"]["on_power"] or (copied and cfg["notify"]["on_backup"])) and webhook_url():
         sess["updated"] = int(ended or time.time())  # a duração conta até o console sair da rede
         discord_delete(sess.get("message_id"))
-        send_embed(session_embed(sess, True))
+        send_embed(session_embed(cfg, sess, True))
 
 
-def notify_error(cfg, title, description):
+def notify_error(cfg, title_key, description):
     """Erros iguais em sequência não viram uma mensagem por rodada."""
     if not cfg["notify"]["on_error"] or not webhook_url():
         return
@@ -383,7 +385,7 @@ def notify_error(cfg, title, description):
             return
         state["meta"]["last_error_notified"] = int(time.time())
         save_json(STATE_FILE, state)
-    send_embed(make_embed("⚠️  " + title, description, 0xFF6B6B))
+    send_embed(make_embed("⚠️  " + tr(cfg["notify"]["language"], title_key), description, 0xFF6B6B))
 
 
 # ---------------------------------------------------------------- PS5 (leitura)
@@ -682,9 +684,9 @@ def run_backup(cfg, trigger, pending=None):
         included = profile_included(cfg, uid, name)
         log.info("PERFIL NOVO no PS5: %s (%s); %s", name, uid, "incluído" if included else "fora do backup")
         if cfg["notify"]["on_new_profile"]:
-            send_embed(make_embed(f"👤  Perfil novo no PS5: {name}",
-                                  "Os saves dele já entram no backup." if included else
-                                  "Ele está fora do backup até você incluir na interface.", 0x7C8CFF))
+            lang = cfg["notify"]["language"]
+            send_embed(make_embed(tr(lang, "new_profile_title", name=name),
+                                  tr(lang, "new_profile_in" if included else "new_profile_out"), 0x7C8CFF))
     return errors
 
 
@@ -776,9 +778,9 @@ def check_size(cfg):
         state["meta"]["last_size_warned"] = int(time.time())
         save_json(STATE_FILE, state)
     if cfg["notify"]["on_error"]:
-        send_embed(make_embed("📦  Atenção ao espaço dos backups",
-                              f"Os backups ocupam {used / 1024 ** 3:.1f} GB e restam {free / 1024 ** 3:.1f} GB livres "
-                              "no disco. Nada foi apagado. Veja Ajustes › Quanto guardar.", 0xFFC53D))
+        lang = cfg["notify"]["language"]
+        send_embed(make_embed(tr(lang, "space_title"), tr(lang, "space_body", used=f"{used / 1024 ** 3:.1f}",
+                                                         free=f"{free / 1024 ** 3:.1f}"), 0xFFC53D))
 
 
 def safe_run(cfg, trigger, pending=None):
@@ -786,13 +788,13 @@ def safe_run(cfg, trigger, pending=None):
     try:
         errors = run_backup(cfg, trigger, pending)
         if errors:
-            notify_error(cfg, "Falha ao copiar saves", "\n".join(errors[:15]))
+            notify_error(cfg, "copy_failed_title", "\n".join(errors[:15]))
         if pending is None:
             check_size(cfg)
         return not errors
     except Exception as e:
         log.error("backup [%s] falhou: %s: %s", trigger, type(e).__name__, e)
-        notify_error(cfg, "Backup falhou", f"`{type(e).__name__}: {e}`")
+        notify_error(cfg, "backup_failed_title", f"`{type(e).__name__}: {e}`")
         return False
     finally:
         STATUS["running"] = None

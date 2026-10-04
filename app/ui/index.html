@@ -232,16 +232,16 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
   <header class="top">
     <div class="brand"><img src="/mark.svg" alt="">Cartão de Memória</div>
     <nav class="tabs" role="tablist">
-      <button role="tab" data-tab="cards" aria-selected="true">Cartões</button>
-      <button role="tab" data-tab="stats" aria-selected="false">Painel</button>
-      <button role="tab" data-tab="settings" aria-selected="false">Ajustes</button>
-      <button role="tab" data-tab="log" aria-selected="false">Registro</button>
+      <button role="tab" data-tab="cards" aria-selected="true" data-i18n="tab_cards">Cartões</button>
+      <button role="tab" data-tab="stats" aria-selected="false" data-i18n="tab_stats">Painel</button>
+      <button role="tab" data-tab="settings" aria-selected="false" data-i18n="tab_settings">Ajustes</button>
+      <button role="tab" data-tab="log" aria-selected="false" data-i18n="tab_log">Registro</button>
     </nav>
-    <button class="go" id="go">Copiar agora</button>
+    <button class="go" id="go" data-i18n="go">Copiar agora</button>
   </header>
 
   <section class="state">
-    <h1 id="headline">Lendo o cartão…</h1>
+    <h1 id="headline" data-i18n="loading">Lendo o cartão…</h1>
     <p><span class="led" id="led"></span><span id="statusline"></span></p>
   </section>
 
@@ -249,10 +249,10 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
     <section id="tab-cards">
       <div class="cards" id="cards"></div>
       <div class="legend">
-        <span><i></i>Jogo guardado (o número é a quantidade de saves)</span>
-        <span><i class="w"></i>Aguardando a primeira cópia</span>
-        <span><i class="o"></i>Fora do backup</span>
-        <span><i class="e"></i>Espaço livre</span>
+        <span><i></i><span data-i18n="legend_saved"></span></span>
+        <span><i class="w"></i><span data-i18n="legend_wait"></span></span>
+        <span><i class="o"></i><span data-i18n="legend_off"></span></span>
+        <span><i class="e"></i><span data-i18n="legend_free"></span></span>
       </div>
       <div class="proj" id="proj" hidden></div>
     </section>
@@ -263,38 +263,277 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
 </div>
 
 <div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" aria-label="Detalhes do save"></aside>
+<aside class="drawer" id="drawer" data-i18n-aria="drawer_aria"></aside>
 <div class="toast" id="toast" role="status"></div>
 <div id="tip" role="tooltip"></div>
 
 <script>
+/* i18n:start */
+const I18N = {
+  "pt-BR": {
+    tab_cards: "Cartões", tab_stats: "Painel", tab_settings: "Ajustes", tab_log: "Registro",
+    go: "Copiar agora", going: "Copiando", loading: "Lendo o cartão…", drawer_aria: "Detalhes do save",
+    legend_saved: "Jogo guardado (o número é a quantidade de saves)", legend_wait: "Aguardando a primeira cópia",
+    legend_off: "Fora do backup", legend_free: "Espaço livre",
+    saves: ["{n} save", "{n} saves"], versions: ["{n} versão", "{n} versões"], games: ["{n} jogo", "{n} jogos"],
+    copies: ["{n} cópia", "{n} cópias"], versions_stored: ["{n} versão guardada", "{n} versões guardadas"],
+    ago_now: "agora há pouco", ago_min: "há {n} min", ago_h: "há {n} h", ago_d: ["há {n} dia", "há {n} dias"],
+    failed: "Falhou", no_service: "Sem resposta do serviço de backup.",
+    headline: ["<b>{saves}</b> guardado em {versions}, {size} no servidor.", "<b>{saves}</b> guardados em {versions}, {size} no servidor."],
+    headline_none: "Nenhum save guardado ainda.", over_limit: "Acima do limite de espaço.",
+    last_check: "Última verificação {ago}.", last_check_why: "Última verificação {ago}, motivo: {why}.",
+    st_running: "Copiando os saves do PS5…", st_online: "PS5 ligado em {host}. {last}",
+    st_offline: "PS5 desligado, em repouso ou sem o desbloqueio. A cópia volta sozinha quando ele reaparecer. {last}",
+    trig_manual: "Manual", trig_power_on: "PS5 ligou", trig_save_changed: "Save alterado", trig_schedule: "Agendamento",
+    proj_title: "Projeção de espaço", proj_today_basis: "de hoje", proj_days_basis: "dos últimos {n} dias",
+    proj_pace: "Repetindo o ritmo {basis}: {copies} cópias e {size} lidos do PS5 por dia.",
+    proj_idle: "Nenhuma cópia nova {basis}; a projeção considera só o que já está guardado.",
+    proj_how: "Cada dia futuro é simulado com as regras de limpeza de Ajustes, não é uma linha reta.",
+    today: "hoje", in_30: "em 30 dias", in_90: "em 90 dias", in_year: "em 1 ano", less_than: "menos de {v}",
+    proj_share: "Em um ano isso seria {share}% do espaço que o disco tem hoje para os backups ({free} livres). Sem a limpeza, o mesmo ritmo chegaria a {raw}.",
+    proj_more_days: "A estimativa melhora conforme juntar mais dias de uso (hoje: {n}).",
+    cards_empty: "Ainda não li nenhum perfil. Ligue o PS5, rode o desbloqueio com o ftpsrv e toque em “Copiar agora”.",
+    block_tip: "{game}: {saves}, {versions}", card_empty: "Nenhum save neste perfil", tag_new: "novo",
+    in_backup: "No backup", out_backup: "Fora do backup",
+    sv_none: "nenhuma versão guardada", sv_wait: "aguardando a primeira cópia",
+    sv_gone: "{versions} · não está mais no console", sv_last: "{versions} · última {ago}",
+    newest: "mais recente", pin_tip: "Uma versão fixada nunca é apagada pela limpeza.", pinned: "Fixada", pin: "Fixar",
+    download: "Baixar", system_copy: "reserva do jogo", no_versions: "Sem versões guardadas.", close: "Fechar",
+    drawer_sub: "{saves} de {profile}, {versions}",
+    drawer_off: "Fora do backup. As versões antigas continuam guardadas, mas não entram novas.",
+    keep_game: "Guardar os saves deste jogo", all_profiles: "Vale para todos os perfis.", game_saves: "Saves deste jogo",
+    game_saves_help: "Um jogo costuma gravar vários arquivos (perfil, sistema, cada slot). Cada um tem o próprio histórico.",
+    restore_title: "Para restaurar", restore_1: "Baixe a versão que você quer.",
+    restore_2: "Abra o {link} e use a aba Import no perfil {profile}.", restore_note: "Esta página nunca grava nada no PS5.",
+
+    set_lang: "Idioma", ui_lang: "Idioma da interface", ui_lang_h: "Vale só para este navegador.", lang_auto: "Automático (do navegador)",
+    "s_notify.language": "Idioma dos avisos do Discord", "s_notify.language_h": "Vale a partir da próxima mensagem.",
+    set_when: "Quando copiar",
+    set_when_p: "Com o PS5 desligado não há como ler os saves. Por isso o caminho seguro é copiar cada save logo depois que ele muda, enquanto o console ainda está ligado.",
+    "s_triggers.on_save_change": "Copiar assim que um save mudar", "s_triggers.on_save_change_h": "Cobre desligar e repouso: quando o console cai, a cópia já foi feita.",
+    "s_triggers.watch_interval_seconds": "Olhar os saves a cada (segundos)", "s_triggers.watch_interval_seconds_h": "O atraso máximo é cerca de duas vezes este valor.",
+    "s_triggers.on_power_on": "Copiar quando o PS5 ligar", "s_triggers.on_power_on_h": "Roda assim que o desbloqueio e o ftpsrv respondem.",
+    "s_triggers.power_on_delay_seconds": "Esperar antes dessa cópia (segundos)",
+    "s_triggers.schedule_interval_hours": "Conferência completa a cada (horas)", "s_triggers.schedule_interval_hours_h": "0 desliga. Só roda com o PS5 ligado.",
+    "s_triggers.schedule_daily_at": "Horários fixos", "s_triggers.schedule_daily_at_h": "Separados por vírgula, como 04:00, 18:30. Vazio desliga.",
+    set_who: "Perfis e jogos", set_who_p: "Ligue ou desligue cada perfil direto no cartão dele, na aba Cartões.",
+    "s_filter.new_profiles": "Quando aparecer um perfil novo no PS5", "s_filter.new_profiles_h": "Você é avisado e pode mudar depois no cartão do perfil.",
+    np_include: "Entra no backup", np_exclude: "Fica de fora", stored_suffix: "{size} guardados",
+    set_keep: "Quanto guardar",
+    set_keep_now: "Hoje: {size} em versões guardadas{trash} e {free} GB livres no disco.", set_keep_trash: ", {size} na lixeira",
+    set_keep_p: "As versões antigas são rareadas, nunca zeradas: fica a última de cada hora, depois de cada dia, de cada semana e, para sempre, de cada mês. As mais recentes de cada save e as que você fixar nunca saem.",
+    "s_retention.min_gap_minutes": "Durante o jogo, guardar no máximo uma versão a cada (minutos)", "s_retention.min_gap_minutes_h": "O estado mais recente é sempre guardado; só as cópias intermediárias são substituídas. 0 guarda todas.",
+    "s_retention.thin_old_versions": "Rarear versões antigas", "s_retention.thin_old_versions_h": "Desligado, tudo é guardado para sempre.",
+    "s_retention.keep_all_hours": "Guardar todas as versões das últimas (horas)",
+    "s_retention.keep_hourly_days": "Depois, uma por hora durante (dias)",
+    "s_retention.keep_daily_days": "Depois, uma por dia até completar (dias)",
+    "s_retention.keep_weekly_weeks": "Depois, uma por semana até completar (semanas)", "s_retention.keep_weekly_weeks_h": "Daí em diante fica uma por mês, sem prazo.",
+    "s_retention.keep_min_versions": "Nunca deixar um save com menos de (versões)",
+    "s_retention.trash_days": "Manter na lixeira antes de apagar de vez (dias)", "s_retention.trash_days_h": "Vale para versões com mais de alguns dias. Elas vão para a pasta trash e ainda podem ser recuperadas nesse prazo.",
+    "s_retention.warn_total_gb": "Avisar se os backups passarem de (GB)", "s_retention.warn_total_gb_h": "Só avisa. Passar do limite nunca apaga nada. 0 desliga o aviso.",
+    "s_retention.warn_free_gb": "Avisar se o disco tiver menos de (GB) livres", "s_retention.warn_free_gb_h": "0 desliga o aviso.",
+    set_notify: "Avisos no Discord",
+    set_notify_p: "Quando o PS5 liga chega uma mensagem, que é atualizada em silêncio a cada cópia. Quando ele desliga, ela é trocada por um resumo da sessão. São dois avisos por sessão, e nada de uma mensagem por save.",
+    hook_set: "Já configurado. Cole outro para trocar, ou salve vazio para desligar.", hook_unset: "Cole a URL do webhook do canal.",
+    hook_ph_set: "••••••••  configurado", save: "Salvar", send_test: "Enviar teste",
+    "s_notify.on_power": "Avisar quando o PS5 ligar e desligar", "s_notify.on_power_h": "O aviso de desligar traz o resumo da sessão.",
+    "s_notify.on_backup": "Atualizar a mensagem a cada cópia", "s_notify.on_backup_h": "É uma edição da mesma mensagem; o Discord não notifica edições.",
+    "s_notify.session_gap_hours": "Abrir mensagem nova depois de (horas) sem cópias",
+    "s_notify.on_error": "Avisar quando uma cópia falhar",
+    "s_notify.error_cooldown_minutes": "No máximo um aviso de falha a cada (minutos)",
+    "s_notify.on_new_profile": "Avisar quando surgir um perfil novo",
+    set_console: "Console",
+    "s_ps5.host": "Endereço do PS5",
+    "s_ps5.ftp_port": "Porta do ftpsrv", "s_ps5.ftp_port_h": "É por aqui que os saves são lidos.",
+    "s_ps5.garlic_port": "Porta do Garlic SaveMgr", "s_ps5.garlic_port_h": "Usada só no atalho de restauração.",
+    "s_triggers.probe_interval_seconds": "Checar se o PS5 está ligado a cada (segundos)",
+    "s_triggers.offline_after_failures": "Considerar desligado depois de (falhas seguidas)",
+    "s_triggers.offline_grace_seconds": "Esperar antes de avisar que desligou (segundos)", "s_triggers.offline_grace_seconds_h": "Quedas de rede mais curtas que isso não geram aviso de desligado e ligado.",
+    save_settings: "Salvar ajustes",
+
+    nothing: "nada", none: "nenhum", tile_today: "de jogo registrado hoje", tile_days: "nos últimos {n} dias",
+    tile_game: "jogo mais ativo", tile_day: "dia mais movimentado",
+    heat_title: "Quando o console foi usado",
+    heat_p: "Cada quadrado é uma hora do dia. Quanto mais cheio, mais minutos daquela hora tiveram saves sendo gravados.",
+    heat_tip: "{day}, {h}h: {min} min com saves sendo gravados. {who}", everyone: "Todos",
+    less: "menos", more: "mais", scale_note: "(10 a 60 minutos por hora)",
+    time_title: "Tempo de jogo por save gravado",
+    time_p: "Soma os períodos de 10 minutos em que o jogo gravou algum save. Jogos que salvam pouco aparecem com menos tempo do que foi jogado.",
+    time_tip: "{game} ({profile}): {time} nos últimos {n} dias", time_none: "Sem atividade nos últimos {n} dias.",
+    space_title: "Espaço por jogo", space_p: "Quanto cada jogo ocupa hoje em versões guardadas, somando todos os perfis.",
+    space_tip: "{game}: {size} em versões guardadas", space_none: "Nada guardado ainda.",
+    curve_title: "Espaço nos próximos 12 meses",
+    curve_p: "O ritmo dos últimos dias repetido por um ano, com as regras de limpeza aplicadas dia a dia. A linha contínua é o que já aconteceu; a tracejada é a projeção.",
+    curve_wait: "Calculando a projeção…", d30: "30 dias", d90: "90 dias", y1: "1 ano",
+    curve_aria: "Projeção: {a} em 30 dias, {b} em 90 dias, {c} em 1 ano",
+    tip_today: "Hoje: {size}", tip_past: "Há {n} dias: {size}", tip_future: "Em {n} dias: {size}",
+
+    feed_title: "Cópias recentes", feed_none: "Nenhuma cópia registrada ainda.",
+    integrity: "Integridade", integrity_p: "Refaz o checksum de todas as versões guardadas e compara com o que foi anotado na hora da cópia.",
+    verify_now: "Conferir agora", verifying: "Conferindo…", verify_bad: "{n} com problema: {list}",
+    verify_ok: ["{n} versão íntegra, nenhuma com problema.", "{n} versões íntegras, nenhuma com problema."],
+    tech_log: "Registro técnico do serviço", log_empty: "Vazio.",
+    t_pinned: "Versão fixada", t_unpinned: "Versão liberada", t_started: "Cópia iniciada", t_saved: "Ajustes salvos",
+    t_hook: "Webhook salvo", t_test: "Teste enviado", t_profile_in: "Perfil no backup", t_profile_out: "Perfil fora do backup",
+    t_game_in: "Jogo no backup", t_game_out: "Jogo fora do backup",
+  },
+  en: {
+    tab_cards: "Cards", tab_stats: "Dashboard", tab_settings: "Settings", tab_log: "Log",
+    go: "Back up now", going: "Backing up", loading: "Reading the card…", drawer_aria: "Save details",
+    legend_saved: "Backed-up game (the number is how many saves it has)", legend_wait: "Waiting for its first backup",
+    legend_off: "Not backed up", legend_free: "Empty slot",
+    saves: ["{n} save", "{n} saves"], versions: ["{n} version", "{n} versions"], games: ["{n} game", "{n} games"],
+    copies: ["{n} backup", "{n} backups"], versions_stored: ["{n} version stored", "{n} versions stored"],
+    ago_now: "just now", ago_min: "{n} min ago", ago_h: "{n} h ago", ago_d: ["{n} day ago", "{n} days ago"],
+    failed: "Something went wrong", no_service: "The backup service is not responding.",
+    headline: ["<b>{saves}</b> backed up in {versions}, {size} on the server.", "<b>{saves}</b> backed up in {versions}, {size} on the server."],
+    headline_none: "No saves backed up yet.", over_limit: "Over the storage limit.",
+    last_check: "Last checked {ago}.", last_check_why: "Last checked {ago} ({why}).",
+    st_running: "Copying saves from the PS5…", st_online: "PS5 is on at {host}. {last}",
+    st_offline: "PS5 is off, in rest mode or not jailbroken yet. Backups resume on their own once it's back. {last}",
+    trig_manual: "manual", trig_power_on: "PS5 turned on", trig_save_changed: "save changed", trig_schedule: "schedule",
+    proj_title: "Storage forecast", proj_today_basis: "today's", proj_days_basis: "the last {n} days'",
+    proj_pace: "Repeating {basis} pace: {copies} backups and {size} read from the PS5 per day.",
+    proj_idle: "No new backups at {basis} pace; the forecast only counts what is already stored.",
+    proj_how: "Each future day is simulated with the cleanup rules from Settings, so this is not a straight line.",
+    today: "today", in_30: "in 30 days", in_90: "in 90 days", in_year: "in 1 year", less_than: "less than {v}",
+    proj_share: "A year from now that would be {share}% of the space the disk has for backups today ({free} free). Without cleanup, the same pace would reach {raw}.",
+    proj_more_days: "The estimate gets better with more days of use (so far: {n}).",
+    cards_empty: "No profiles read yet. Turn the PS5 on, run the jailbreak with ftpsrv and hit “Back up now”.",
+    block_tip: "{game}: {saves}, {versions}", card_empty: "No saves on this profile", tag_new: "new",
+    in_backup: "Backed up", out_backup: "Not backed up",
+    sv_none: "no versions stored", sv_wait: "waiting for its first backup",
+    sv_gone: "{versions} · no longer on the console", sv_last: "{versions} · latest {ago}",
+    newest: "latest", pin_tip: "A pinned version is never removed by cleanup.", pinned: "Pinned", pin: "Pin",
+    download: "Download", system_copy: "game's own backup", no_versions: "No versions stored.", close: "Close",
+    drawer_sub: "{saves} from {profile}, {versions}",
+    drawer_off: "Not backed up. Older versions are still kept, but no new ones are added.",
+    keep_game: "Back up this game's saves", all_profiles: "Applies to every profile.", game_saves: "This game's saves",
+    game_saves_help: "A game usually writes several files (profile, system, each slot). Each one has its own history.",
+    restore_title: "To restore", restore_1: "Download the version you want.",
+    restore_2: "Open {link} and use the Import tab on the {profile} profile.", restore_note: "This page never writes anything to the PS5.",
+
+    set_lang: "Language", ui_lang: "Interface language", ui_lang_h: "Only applies to this browser.", lang_auto: "Automatic (from the browser)",
+    "s_notify.language": "Discord notification language", "s_notify.language_h": "Takes effect from the next message.",
+    set_when: "When to back up",
+    set_when_p: "Saves can't be read while the PS5 is off. The safe approach is to copy each save right after it changes, while the console is still on.",
+    "s_triggers.on_save_change": "Back up as soon as a save changes", "s_triggers.on_save_change_h": "Covers power-off and rest mode: by the time the console drops, the copy is already done.",
+    "s_triggers.watch_interval_seconds": "Check the saves every (seconds)", "s_triggers.watch_interval_seconds_h": "The longest delay is roughly twice this value.",
+    "s_triggers.on_power_on": "Back up when the PS5 turns on", "s_triggers.on_power_on_h": "Runs as soon as the jailbreak and ftpsrv respond.",
+    "s_triggers.power_on_delay_seconds": "Wait before that backup (seconds)",
+    "s_triggers.schedule_interval_hours": "Full check every (hours)", "s_triggers.schedule_interval_hours_h": "0 turns it off. Only runs while the PS5 is on.",
+    "s_triggers.schedule_daily_at": "Fixed times", "s_triggers.schedule_daily_at_h": "Comma-separated, like 04:00, 18:30. Leave empty to turn off.",
+    set_who: "Profiles and games", set_who_p: "Turn each profile on or off right on its card, in the Cards tab.",
+    "s_filter.new_profiles": "When a new profile shows up on the PS5", "s_filter.new_profiles_h": "You get notified and can change it later on the profile's card.",
+    np_include: "Back it up", np_exclude: "Leave it out", stored_suffix: "{size} stored",
+    set_keep: "How much to keep",
+    set_keep_now: "Right now: {size} in stored versions{trash} and {free} GB free on the disk.", set_keep_trash: ", {size} in the trash",
+    set_keep_p: "Old versions are thinned out, never wiped: the last one of each hour stays, then of each day, each week and, forever, each month. The newest versions of every save and the ones you pin are never removed.",
+    "s_retention.min_gap_minutes": "While playing, keep at most one version every (minutes)", "s_retention.min_gap_minutes_h": "The latest state is always kept; only the in-between copies are replaced. 0 keeps them all.",
+    "s_retention.thin_old_versions": "Thin out old versions", "s_retention.thin_old_versions_h": "When off, everything is kept forever.",
+    "s_retention.keep_all_hours": "Keep every version from the last (hours)",
+    "s_retention.keep_hourly_days": "Then one per hour for (days)",
+    "s_retention.keep_daily_days": "Then one per day up to (days)",
+    "s_retention.keep_weekly_weeks": "Then one per week up to (weeks)", "s_retention.keep_weekly_weeks_h": "After that, one per month is kept indefinitely.",
+    "s_retention.keep_min_versions": "Never leave a save with fewer than (versions)",
+    "s_retention.trash_days": "Keep in the trash before deleting for good (days)", "s_retention.trash_days_h": "Applies to versions more than a few days old. They move to the trash folder and can still be recovered during this period.",
+    "s_retention.warn_total_gb": "Warn if backups go over (GB)", "s_retention.warn_total_gb_h": "It only warns. Going over the limit never deletes anything. 0 turns the warning off.",
+    "s_retention.warn_free_gb": "Warn if the disk has less than (GB) free", "s_retention.warn_free_gb_h": "0 turns the warning off.",
+    set_notify: "Discord notifications",
+    set_notify_p: "When the PS5 turns on you get one message, which is quietly updated on every backup. When it turns off, that message is replaced by a session summary. That's two notifications per session, never one per save.",
+    hook_set: "Already set. Paste another one to replace it, or save it empty to turn notifications off.", hook_unset: "Paste the channel's webhook URL.",
+    hook_ph_set: "••••••••  set", save: "Save", send_test: "Send test",
+    "s_notify.on_power": "Notify when the PS5 turns on and off", "s_notify.on_power_h": "The power-off message includes the session summary.",
+    "s_notify.on_backup": "Update the message on every backup", "s_notify.on_backup_h": "It edits the same message; Discord doesn't notify on edits.",
+    "s_notify.session_gap_hours": "Start a new message after (hours) without backups",
+    "s_notify.on_error": "Notify when a backup fails",
+    "s_notify.error_cooldown_minutes": "At most one failure notice every (minutes)",
+    "s_notify.on_new_profile": "Notify when a new profile shows up",
+    set_console: "Console",
+    "s_ps5.host": "PS5 address",
+    "s_ps5.ftp_port": "ftpsrv port", "s_ps5.ftp_port_h": "This is where the saves are read from.",
+    "s_ps5.garlic_port": "Garlic SaveMgr port", "s_ps5.garlic_port_h": "Only used for the restore shortcut.",
+    "s_triggers.probe_interval_seconds": "Check whether the PS5 is on every (seconds)",
+    "s_triggers.offline_after_failures": "Treat it as off after (failed checks in a row)",
+    "s_triggers.offline_grace_seconds": "Wait before reporting it as off (seconds)", "s_triggers.offline_grace_seconds_h": "Network drops shorter than this don't trigger off and on notifications.",
+    save_settings: "Save settings",
+
+    nothing: "nothing", none: "none", tile_today: "of play recorded today", tile_days: "in the last {n} days",
+    tile_game: "most active game", tile_day: "busiest day",
+    heat_title: "When the console was used",
+    heat_p: "Each square is one hour of the day. The fuller it is, the more minutes of that hour had saves being written.",
+    heat_tip: "{day}, {h}:00: {min} min with saves being written. {who}", everyone: "Everyone",
+    less: "less", more: "more", scale_note: "(10 to 60 minutes per hour)",
+    time_title: "Play time by saves written",
+    time_p: "Adds up the 10-minute periods in which the game wrote a save. Games that rarely save show less time than was actually played.",
+    time_tip: "{game} ({profile}): {time} in the last {n} days", time_none: "No activity in the last {n} days.",
+    space_title: "Storage by game", space_p: "How much each game takes up today in stored versions, across all profiles.",
+    space_tip: "{game}: {size} in stored versions", space_none: "Nothing stored yet.",
+    curve_title: "Storage over the next 12 months",
+    curve_p: "The pace of the last few days repeated for a year, with the cleanup rules applied day by day. The solid line is what already happened; the dashed line is the forecast.",
+    curve_wait: "Working out the forecast…", d30: "30 days", d90: "90 days", y1: "1 year",
+    curve_aria: "Forecast: {a} in 30 days, {b} in 90 days, {c} in 1 year",
+    tip_today: "Today: {size}", tip_past: "{n} days ago: {size}", tip_future: "In {n} days: {size}",
+
+    feed_title: "Recent backups", feed_none: "No backups recorded yet.",
+    integrity: "Integrity", integrity_p: "Recomputes the checksum of every stored version and compares it with the one recorded when it was copied.",
+    verify_now: "Check now", verifying: "Checking…", verify_bad: "{n} with problems: {list}",
+    verify_ok: ["{n} version intact, none with problems.", "{n} versions intact, none with problems."],
+    tech_log: "Service technical log (in Portuguese)", log_empty: "Empty.",
+    t_pinned: "Version pinned", t_unpinned: "Version unpinned", t_started: "Backup started", t_saved: "Settings saved",
+    t_hook: "Webhook saved", t_test: "Test sent", t_profile_in: "Profile backed up", t_profile_out: "Profile left out",
+    t_game_in: "Game backed up", t_game_out: "Game left out",
+  },
+};
+/* i18n:end */
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 let data = null, lastJSON = "", tab = "cards", openKey = null, formDirty = false;
 
-const mb = b => (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace(".", ",") + " MB";
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+// Idioma: o escolhido em Ajustes (guardado neste navegador) ou, sem escolha, o do navegador.
+function storedLang() { try { return localStorage.getItem("lang") || ""; } catch (e) { return ""; } }
+const autoLang = () => (navigator.language || "").toLowerCase().startsWith("pt") ? "pt-BR" : "en";
+let lang = I18N[storedLang()] ? storedLang() : autoLang();
+const fill = (s, v) => v ? s.replace(/\{(\w+)\}/g, (m, k) => v[k] ?? m) : s;
+const has = key => key in I18N[lang] || key in I18N["pt-BR"];
+const t = (key, vars) => fill(I18N[lang][key] ?? I18N["pt-BR"][key] ?? key, vars);
+const tn = (n, key, vars) => fill((I18N[lang][key] ?? I18N["pt-BR"][key])[n === 1 ? 0 : 1], { n, ...vars });
+const nf = (n, digits = 0) => n.toLocaleString(lang, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+function applyStatic() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach(el => { if (el.id !== "headline" || !data) el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => el.setAttribute("aria-label", t(el.dataset.i18nAria)));
+}
+function setLang(choice) {
+  try { choice ? localStorage.setItem("lang", choice) : localStorage.removeItem("lang"); } catch (e) {}
+  lang = I18N[choice] ? choice : autoLang();
+  applyStatic();
+  if (data) { render(); if (tab === "settings") renderSettings(); }
+}
+
+const mb = b => nf(b / 1048576, b < 10485760 ? 1 : 0) + " MB";
 function stampDate(s) { // "20261004-135344" no fuso do servidor
   return new Date(+s.slice(0, 4), s.slice(4, 6) - 1, +s.slice(6, 8), +s.slice(9, 11), +s.slice(11, 13), +s.slice(13, 15));
 }
 function ago(d) {
   const s = Math.max(0, (Date.now() - d) / 1000);
-  if (s < 90) return "agora há pouco";
-  if (s < 3600) return `há ${Math.round(s / 60)} min`;
-  if (s < 86400) return `há ${Math.round(s / 3600)} h`;
-  return `há ${plural(Math.round(s / 86400), "dia", "dias")}`;
+  if (s < 90) return t("ago_now");
+  if (s < 3600) return t("ago_min", { n: Math.round(s / 60) });
+  if (s < 86400) return t("ago_h", { n: Math.round(s / 3600) });
+  return tn(Math.round(s / 86400), "ago_d");
 }
-const full = d => d.toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const full = d => d.toLocaleString(lang, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const trig = k => has("trig_" + k) ? t("trig_" + k) : k;
 
 function toast(msg, err) {
-  const t = $("#toast");
-  t.textContent = msg; t.className = "toast show" + (err ? " err" : "");
-  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.className = "toast", err ? 6000 : 2600);
+  const el = $("#toast");
+  el.textContent = msg; el.className = "toast show" + (err ? " err" : "");
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => el.className = "toast", err ? 6000 : 2600);
 }
 async function post(path, body = {}) {
-  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Lang": lang }, body: JSON.stringify(body) });
   const j = await r.json();
-  if (!r.ok) throw new Error(j.error || "Falhou");
+  if (!r.ok) throw new Error(j.error || t("failed"));
   return j;
 }
 async function act(fn, okMsg) {
@@ -306,7 +545,7 @@ async function refresh(force) {
     const text = await (await fetch("/api/overview")).text();
     if (text === lastJSON && !force) return;
     lastJSON = text; data = JSON.parse(text); render();
-  } catch (e) { $("#statusline").textContent = "Sem resposta do serviço de backup."; }
+  } catch (e) { $("#statusline").textContent = t("no_service"); }
 }
 
 const gameName = tid => data.titles[tid]?.name || tid;
@@ -315,19 +554,19 @@ const allSaves = () => data.profiles.flatMap(p => p.saves.map(s => ({ ...s, prof
 const saveOff = s => !s.profile.included || data.titles[s.title]?.excluded;
 
 function render() {
-  const st = data.status, t = data.totals;
-  $("#headline").innerHTML = t.versions
-    ? `<b>${plural(t.saves, "save", "saves")}</b> ${t.saves === 1 ? "guardado" : "guardados"} em ${plural(t.versions, "versão", "versões")}, ${mb(t.bytes)} no servidor.`
-    : "Nenhum save guardado ainda.";
-  if (t.over_limit) $("#headline").innerHTML += ` <span style="color:var(--bad)">Acima do limite de espaço.</span>`;
+  const st = data.status, tt = data.totals;
+  $("#headline").innerHTML = tt.versions
+    ? tn(tt.saves, "headline", { saves: tn(tt.saves, "saves"), versions: tn(tt.versions, "versions"), size: mb(tt.bytes) })
+    : t("headline_none");
+  if (tt.over_limit) $("#headline").innerHTML += ` <span style="color:var(--bad)">${t("over_limit")}</span>`;
   $("#led").className = "led" + (st.online ? " on" : "");
-  const last = st.last_run ? `Última verificação ${ago(new Date(st.last_run.replace(" ", "T")))}${st.last_trigger ? `, motivo: ${st.last_trigger}` : ""}.` : "";
-  $("#statusline").textContent = st.running ? "Copiando os saves do PS5…"
-    : st.online ? `PS5 ligado em ${st.host}. ${last}`
-    : `PS5 desligado, em repouso ou sem o desbloqueio. A cópia volta sozinha quando ele reaparecer. ${last}`;
+  const when = st.last_run && ago(new Date(st.last_run.replace(" ", "T")));
+  const last = !when ? "" : st.last_trigger ? t("last_check_why", { ago: when, why: trig(st.last_trigger) }) : t("last_check", { ago: when });
+  $("#statusline").textContent = st.running ? t("st_running")
+    : st.online ? t("st_online", { host: st.host, last }) : t("st_offline", { last });
   const go = $("#go");
   go.disabled = !!st.running || !st.online; go.classList.toggle("busy", !!st.running);
-  go.textContent = st.running ? "Copiando" : "Copiar agora";
+  go.textContent = st.running ? t("going") : t("go");
   renderCards();
   renderProjection();
   if (openKey) renderDrawer();
@@ -336,26 +575,25 @@ function render() {
   if (tab === "settings" && !formDirty) renderSettings();
 }
 
-const gb = b => b < 1073741824 ? mb(b) : (b / 1073741824).toFixed(b < 10737418240 ? 1 : 0).replace(".", ",") + " GB";
+const gb = b => b < 1073741824 ? mb(b) : nf(b / 1073741824, b < 10737418240 ? 1 : 0) + " GB";
 function renderProjection() {
   const p = data.projection, box = $("#proj");
   box.hidden = !p;
   if (!p) return;
   const year = p.projected["365"], share = year / (p.free_bytes + p.now_bytes) * 100;
-  const basis = p.window_days === 1 ? "de hoje" : `dos últimos ${p.window_days} dias`;
+  const basis = p.window_days === 1 ? t("proj_today_basis") : t("proj_days_basis", { n: p.window_days });
   const pace = p.copies_per_day
-    ? `Repetindo o ritmo ${basis}: ${String(p.copies_per_day).replace(".", ",")} cópias e ${gb(p.raw_bytes_per_day)} lidos do PS5 por dia.`
-    : `Nenhuma cópia nova ${basis}; a projeção considera só o que já está guardado.`;
-  box.innerHTML = `<h3>Projeção de espaço</h3>
-    <p>${pace} Cada dia futuro é simulado com as regras de limpeza de Ajustes, não é uma linha reta.</p>
+    ? t("proj_pace", { basis, copies: nf(p.copies_per_day, 1), size: gb(p.raw_bytes_per_day) })
+    : t("proj_idle", { basis });
+  box.innerHTML = `<h3>${t("proj_title")}</h3>
+    <p>${pace} ${t("proj_how")}</p>
     <div class="proj-row">
-      <div><b>${gb(p.now_bytes)}</b><small>hoje</small></div>
-      <div><b>${gb(p.projected["30"])}</b><small>em 30 dias</small></div>
-      <div><b>${gb(p.projected["90"])}</b><small>em 90 dias</small></div>
-      <div><b>${gb(year)}</b><small>em 1 ano</small></div>
+      <div><b>${gb(p.now_bytes)}</b><small>${t("today")}</small></div>
+      <div><b>${gb(p.projected["30"])}</b><small>${t("in_30")}</small></div>
+      <div><b>${gb(p.projected["90"])}</b><small>${t("in_90")}</small></div>
+      <div><b>${gb(year)}</b><small>${t("in_year")}</small></div>
     </div>
-    <p>Em um ano isso seria ${share < 0.1 ? "menos de 0,1" : share.toFixed(1).replace(".", ",")}% do espaço que o disco tem hoje para os backups (${gb(p.free_bytes)} livres).
-      Sem a limpeza, o mesmo ritmo chegaria a ${gb(p.without_cleanup_year)}.${p.window_days < 7 ? ` A estimativa melhora conforme juntar mais dias de uso (hoje: ${p.window_days}).` : ""}</p>`;
+    <p>${t("proj_share", { share: share < 0.1 ? t("less_than", { v: nf(0.1, 1) }) : nf(share, 1), free: gb(p.free_bytes), raw: gb(p.without_cleanup_year) })}${p.window_days < 7 ? " " + t("proj_more_days", { n: p.window_days }) : ""}</p>`;
 }
 function gamesOf(p) { // agrupa os saves do perfil por jogo
   const map = new Map();
@@ -364,31 +602,31 @@ function gamesOf(p) { // agrupa os saves do perfil por jogo
 }
 function renderCards() {
   if (!data.profiles.length) {
-    $("#cards").innerHTML = `<div class="empty">Ainda não li nenhum perfil. Ligue o PS5, rode o desbloqueio com o ftpsrv e toque em “Copiar agora”.</div>`;
+    $("#cards").innerHTML = `<div class="empty">${t("cards_empty")}</div>`;
     return;
   }
   $("#cards").innerHTML = data.profiles.map(p => {
     const games = gamesOf(p), slots = Math.max(15, Math.ceil(games.length / 5) * 5);
     const versions = games.reduce((n, g) => n + g.versions, 0);
     const blocks = games.map(g => {
-      const t = data.titles[g.title] || {}, off = !p.included || t.excluded;
+      const ti = data.titles[g.title] || {}, off = !p.included || ti.excluded;
       const cls = off ? "off" : g.versions ? "" : "wait";
-      const what = `${gameName(g.title)}: ${plural(g.saves.length, "save", "saves")}, ${plural(g.versions, "versão", "versões")}`;
+      const what = t("block_tip", { game: gameName(g.title), saves: tn(g.saves.length, "saves"), versions: tn(g.versions, "versions") });
       return `<button class="block ${cls}" data-key="${esc(p.uid + "/" + g.title)}" title="${esc(what)}" aria-label="${esc(what)}"
-        ${t.icon ? `style="--art:url(/art/${g.title}/icon0.png)"` : ""}>
-        ${t.icon ? "" : `<span class="ini">${esc(g.title.slice(0, 4))}</span>`}
+        ${ti.icon ? `style="--art:url(/art/${g.title}/icon0.png)"` : ""}>
+        ${ti.icon ? "" : `<span class="ini">${esc(g.title.slice(0, 4))}</span>`}
         <span class="n">${g.saves.length}</span></button>`;
     }).join("") + `<span class="block"></span>`.repeat(slots - games.length);
     const foot = games.length
-      ? `${plural(games.length, "jogo", "jogos")} · ${plural(p.saves.length, "save", "saves")} · ${plural(versions, "versão", "versões")}`
-      : "Nenhum save neste perfil";
+      ? `${tn(games.length, "games")} · ${tn(p.saves.length, "saves")} · ${tn(versions, "versions")}`
+      : t("card_empty");
     return `<article class="card ${p.included ? "" : "out"}">
       <div class="card-label">
-        <div><h2>${esc(p.name)}${p.is_new ? `<span class="tag">novo</span>` : ""}</h2><small class="mono">${esc(p.uid)}</small></div>
+        <div><h2>${esc(p.name)}${p.is_new ? `<span class="tag">${t("tag_new")}</span>` : ""}</h2><small class="mono">${esc(p.uid)}</small></div>
         <label class="sw"><input type="checkbox" data-profile="${esc(p.uid)}" ${p.included ? "checked" : ""}><span></span></label>
       </div>
       <div class="blocks">${blocks}</div>
-      <div class="card-foot"><span>${foot}</span><span>${p.included ? "No backup" : "Fora do backup"}</span></div>
+      <div class="card-foot"><span>${foot}</span><span>${p.included ? t("in_backup") : t("out_backup")}</span></div>
     </article>`;
   }).join("");
 }
@@ -398,41 +636,43 @@ function renderDrawer() {
   const [uid, title] = openKey.split("/");
   const p = data.profiles.find(x => x.uid === uid), g = p && gamesOf(p).find(x => x.title === title);
   if (!g) return closeDrawer();
-  const t = data.titles[title] || {}, off = !p.included || t.excluded;
+  const ti = data.titles[title] || {}, off = !p.included || ti.excluded;
   const groups = g.saves.map(s => {
-    const state = !s.versions.length ? (off ? "nenhuma versão guardada" : "aguardando a primeira cópia")
-      : !s.on_console ? `${plural(s.versions.length, "versão", "versões")} · não está mais no console`
-      : `${plural(s.versions.length, "versão", "versões")} · última ${ago(stampDate(s.versions[0].stamp))}`;
+    const count = tn(s.versions.length, "versions");
+    const state = !s.versions.length ? (off ? t("sv_none") : t("sv_wait"))
+      : !s.on_console ? t("sv_gone", { versions: count })
+      : t("sv_last", { versions: count, ago: ago(stampDate(s.versions[0].stamp)) });
     const versions = s.versions.map((v, i) => `<div class="ver">
-        <strong>${full(stampDate(v.stamp))}${i === 0 ? ` <span class="tag">mais recente</span>` : ""}</strong>
-        <small>${esc(v.trigger)} · ${mb(v.size)}${v.sub && v.sub !== v.label ? " · " + esc(v.sub) : ""} · <span class="mono" title="SHA-256: ${esc(v.sha256)}">${esc(v.sha256.slice(0, 12))}</span></small>
-        <span class="acts"><button data-pin="${v.stamp}" data-file="${esc(s.file)}" aria-pressed="${v.pinned}" title="Uma versão fixada nunca é apagada pela limpeza.">${v.pinned ? "Fixada" : "Fixar"}</button>
-        <a href="/download/${s.uid}/${s.title}/${encodeURIComponent(s.file)}/${v.stamp}" download>Baixar</a></span>
+        <strong>${full(stampDate(v.stamp))}${i === 0 ? ` <span class="tag">${t("newest")}</span>` : ""}</strong>
+        <small>${esc(trig(v.trigger))} · ${mb(v.size)}${v.sub && v.sub !== v.label ? " · " + esc(v.sub) : ""} · <span class="mono" title="SHA-256: ${esc(v.sha256)}">${esc(v.sha256.slice(0, 12))}</span></small>
+        <span class="acts"><button data-pin="${v.stamp}" data-file="${esc(s.file)}" aria-pressed="${v.pinned}" title="${esc(t("pin_tip"))}">${v.pinned ? t("pinned") : t("pin")}</button>
+        <a href="/download/${s.uid}/${s.title}/${encodeURIComponent(s.file)}/${v.stamp}" download>${t("download")}</a></span>
       </div>`).join("");
     return `<details class="save" data-save="${esc(s.file)}" ${openSaves.has(s.file) ? "open" : ""}>
-      <summary><b>${esc(s.label || s.name)}</b>${s.is_system_copy ? ` <span class="chip">reserva do jogo</span>` : ""}
+      <summary><b>${esc(s.label || s.name)}</b>${s.is_system_copy ? ` <span class="chip">${t("system_copy")}</span>` : ""}
         <small>${esc(state)}${s.sub && s.sub !== s.label ? " · " + esc(s.sub) : ""}</small><small class="mono">${esc(s.file)}</small></summary>
-      ${versions || `<div class="ver"><small>Sem versões guardadas.</small></div>`}</details>`;
+      ${versions || `<div class="ver"><small>${t("no_versions")}</small></div>`}</details>`;
   }).join("");
   const top = $("#drawer").scrollTop;
+  const link = `<a href="${esc(data.status.garlic_url)}" target="_blank" rel="noopener">Garlic SaveMgr</a>`;
   $("#drawer").innerHTML = `
-    <div class="art" ${t.pic ? `style="--pic:url(/art/${title}/pic0.png)"` : ""}>
-      <button class="x" id="closeDrawer" aria-label="Fechar">×</button>
+    <div class="art" ${ti.pic ? `style="--pic:url(/art/${title}/pic0.png)"` : ""}>
+      <button class="x" id="closeDrawer" aria-label="${esc(t("close"))}">×</button>
       <h3>${esc(gameName(title))}</h3>
-      <p>${plural(g.saves.length, "save", "saves")} de ${esc(p.name)}, ${plural(g.versions, "versão guardada", "versões guardadas")}</p>
-      <div class="chips"><span>${esc(title)}</span>${t.version ? `<span>v${esc(t.version)}</span>` : ""}</div>
+      <p>${t("drawer_sub", { saves: tn(g.saves.length, "saves"), profile: esc(p.name), versions: tn(g.versions, "versions_stored") })}</p>
+      <div class="chips"><span>${esc(title)}</span>${ti.version ? `<span>v${esc(ti.version)}</span>` : ""}</div>
     </div>
     <div class="dbody">
-      ${off ? `<div class="row"><span>Fora do backup. As versões antigas continuam guardadas, mas não entram novas.</span></div>` : ""}
-      <div class="row"><span>Guardar os saves deste jogo<br><small style="color:var(--mute)">Vale para todos os perfis.</small></span>
-        <label class="sw"><input type="checkbox" data-title="${esc(title)}" ${t.excluded ? "" : "checked"}><span></span></label></div>
-      <h4>Saves deste jogo</h4>
-      <p style="margin:6px 0 10px;color:var(--mute);font-size:13.5px">Um jogo costuma gravar vários arquivos (perfil, sistema, cada slot). Cada um tem o próprio histórico.</p>
+      ${off ? `<div class="row"><span>${t("drawer_off")}</span></div>` : ""}
+      <div class="row"><span>${t("keep_game")}<br><small style="color:var(--mute)">${t("all_profiles")}</small></span>
+        <label class="sw"><input type="checkbox" data-title="${esc(title)}" ${ti.excluded ? "" : "checked"}><span></span></label></div>
+      <h4>${t("game_saves")}</h4>
+      <p style="margin:6px 0 10px;color:var(--mute);font-size:13.5px">${t("game_saves_help")}</p>
       ${groups}
-      <div class="note"><b>Para restaurar</b>
-        <ol><li>Baixe a versão que você quer.</li>
-        <li>Abra o <a href="${esc(data.status.garlic_url)}" target="_blank" rel="noopener">Garlic SaveMgr</a> e use a aba Import no perfil ${esc(p.name)}.</li></ol>
-        Esta página nunca grava nada no PS5.</div>
+      <div class="note"><b>${t("restore_title")}</b>
+        <ol><li>${t("restore_1")}</li>
+        <li>${t("restore_2", { link, profile: esc(p.name) })}</li></ol>
+        ${t("restore_note")}</div>
     </div>`;
   $("#drawer").scrollTop = top;
 }
@@ -440,69 +680,74 @@ function openDrawer(key) { openKey = key; openSaves.clear(); renderDrawer(); $("
 function closeDrawer() { openKey = null; $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
 
 /* ---------- ajustes ---------- */
-const field = (path, label, help, control) => `<div class="f"><label for="${path}"><b>${label}</b>${help ? `<small>${help}</small>` : ""}</label>${control}</div>`;
+// O rótulo e a ajuda de cada campo vêm do dicionário: "s_<seção.chave>" e "s_<seção.chave>_h".
+const field = (path, control) => `<div class="f"><label for="${path}"><b>${t("s_" + path)}</b>${has(`s_${path}_h`) ? `<small>${t(`s_${path}_h`)}</small>` : ""}</label>${control}</div>`;
 const get = path => path.split(".").reduce((o, k) => o[k], data.config);
-const num = (path, label, help, min = 0) => field(path, label, help, `<input type="number" id="${path}" data-path="${path}" data-kind="int" min="${min}" value="${get(path)}">`);
-const txt = (path, label, help, kind = "str") => field(path, label, help, `<input type="text" id="${path}" data-path="${path}" data-kind="${kind}" value="${esc(kind === "str" ? get(path) : get(path).join(", "))}">`);
-const tog = (path, label, help) => field(path, label, help, `<label class="sw"><input type="checkbox" id="${path}" data-path="${path}" data-kind="bool" ${get(path) ? "checked" : ""}><span></span></label>`);
+const num = (path, min = 0) => field(path, `<input type="number" id="${path}" data-path="${path}" data-kind="int" min="${min}" value="${get(path)}">`);
+const txt = (path, kind = "str") => field(path, `<input type="text" id="${path}" data-path="${path}" data-kind="${kind}" value="${esc(kind === "str" ? get(path) : get(path).join(", "))}">`);
+const tog = path => field(path, `<label class="sw"><input type="checkbox" id="${path}" data-path="${path}" data-kind="bool" ${get(path) ? "checked" : ""}><span></span></label>`);
+const pick = (path, options) => field(path, `<select id="${path}" data-path="${path}" data-kind="str">${options.map(([v, label]) => `<option value="${v}" ${get(path) === v ? "selected" : ""}>${label}</option>`).join("")}</select>`);
+const LANG_NAMES = [["pt-BR", "Português (Brasil)"], ["en", "English"]];
 
 function renderSettings() {
-  const c = data.config, w = data.webhook;
+  const w = data.webhook, chosen = storedLang();
   const titles = Object.entries(data.titles).sort((a, b) => (a[1].name || a[0]).localeCompare(b[1].name || b[0]));
   $("#tab-settings").innerHTML = `
-  <div class="panel"><h3>Quando copiar</h3>
-    <p>Com o PS5 desligado não há como ler os saves. Por isso o caminho seguro é copiar cada save logo depois que ele muda, enquanto o console ainda está ligado.</p>
-    ${tog("triggers.on_save_change", "Copiar assim que um save mudar", "Cobre desligar e repouso: quando o console cai, a cópia já foi feita.")}
-    ${num("triggers.watch_interval_seconds", "Olhar os saves a cada (segundos)", "O atraso máximo é cerca de duas vezes este valor.", 10)}
-    ${tog("triggers.on_power_on", "Copiar quando o PS5 ligar", "Roda assim que o desbloqueio e o ftpsrv respondem.")}
-    ${num("triggers.power_on_delay_seconds", "Esperar antes dessa cópia (segundos)", "")}
-    ${num("triggers.schedule_interval_hours", "Conferência completa a cada (horas)", "0 desliga. Só roda com o PS5 ligado.")}
-    ${txt("triggers.schedule_daily_at", "Horários fixos", "Separados por vírgula, como 04:00, 18:30. Vazio desliga.", "list")}
+  <div class="panel"><h3>${t("set_lang")}</h3>
+    <div class="f"><label for="uiLang"><b>${t("ui_lang")}</b><small>${t("ui_lang_h")}</small></label>
+      <select id="uiLang"><option value="">${t("lang_auto")}</option>${LANG_NAMES.map(([v, label]) => `<option value="${v}" ${chosen === v ? "selected" : ""}>${label}</option>`).join("")}</select></div>
+    ${pick("notify.language", LANG_NAMES)}
   </div>
-  <div class="panel"><h3>Perfis e jogos</h3>
-    <p>Ligue ou desligue cada perfil direto no cartão dele, na aba Cartões.</p>
-    ${field("filter.new_profiles", "Quando aparecer um perfil novo no PS5", "Você é avisado e pode mudar depois no cartão do perfil.",
-      `<select id="filter.new_profiles" data-path="filter.new_profiles" data-kind="str">
-        <option value="include" ${c.filter.new_profiles === "include" ? "selected" : ""}>Entra no backup</option>
-        <option value="exclude" ${c.filter.new_profiles === "exclude" ? "selected" : ""}>Fica de fora</option></select>`)}
-    ${titles.map(([id, t]) => `<div class="f"><label><b>${esc(t.name || id)}</b><small><span class="mono">${esc(id)}</span>${t.bytes ? " · " + mb(t.bytes) + " guardados" : ""}</small></label>
-      <label class="sw"><input type="checkbox" data-title="${esc(id)}" ${t.excluded ? "" : "checked"}><span></span></label></div>`).join("")}
+  <div class="panel"><h3>${t("set_when")}</h3>
+    <p>${t("set_when_p")}</p>
+    ${tog("triggers.on_save_change")}
+    ${num("triggers.watch_interval_seconds", 10)}
+    ${tog("triggers.on_power_on")}
+    ${num("triggers.power_on_delay_seconds")}
+    ${num("triggers.schedule_interval_hours")}
+    ${txt("triggers.schedule_daily_at", "list")}
   </div>
-  <div class="panel"><h3>Quanto guardar</h3>
-    <p>Hoje: ${mb(data.totals.bytes)} em versões guardadas${data.totals.trash_bytes ? `, ${mb(data.totals.trash_bytes)} na lixeira` : ""} e ${(data.totals.free_bytes / 1073741824).toFixed(0)} GB livres no disco.
-      As versões antigas são rareadas, nunca zeradas: fica a última de cada hora, depois de cada dia, de cada semana e, para sempre, de cada mês. As mais recentes de cada save e as que você fixar nunca saem.</p>
-    ${num("retention.min_gap_minutes", "Durante o jogo, guardar no máximo uma versão a cada (minutos)", "O estado mais recente é sempre guardado; só as cópias intermediárias são substituídas. 0 guarda todas.")}
-    ${tog("retention.thin_old_versions", "Rarear versões antigas", "Desligado, tudo é guardado para sempre.")}
-    ${num("retention.keep_all_hours", "Guardar todas as versões das últimas (horas)", "")}
-    ${num("retention.keep_hourly_days", "Depois, uma por hora durante (dias)", "")}
-    ${num("retention.keep_daily_days", "Depois, uma por dia até completar (dias)", "")}
-    ${num("retention.keep_weekly_weeks", "Depois, uma por semana até completar (semanas)", "Daí em diante fica uma por mês, sem prazo.")}
-    ${num("retention.keep_min_versions", "Nunca deixar um save com menos de (versões)", "", 1)}
-    ${num("retention.trash_days", "Manter na lixeira antes de apagar de vez (dias)", "Vale para versões com mais de alguns dias. Elas vão para a pasta trash e ainda podem ser recuperadas nesse prazo.")}
-    ${num("retention.warn_total_gb", "Avisar se os backups passarem de (GB)", "Só avisa. Passar do limite nunca apaga nada. 0 desliga o aviso.")}
-    ${num("retention.warn_free_gb", "Avisar se o disco tiver menos de (GB) livres", "0 desliga o aviso.")}
+  <div class="panel"><h3>${t("set_who")}</h3>
+    <p>${t("set_who_p")}</p>
+    ${pick("filter.new_profiles", [["include", t("np_include")], ["exclude", t("np_exclude")]])}
+    ${titles.map(([id, ti]) => `<div class="f"><label><b>${esc(ti.name || id)}</b><small><span class="mono">${esc(id)}</span>${ti.bytes ? " · " + t("stored_suffix", { size: mb(ti.bytes) }) : ""}</small></label>
+      <label class="sw"><input type="checkbox" data-title="${esc(id)}" ${ti.excluded ? "" : "checked"}><span></span></label></div>`).join("")}
   </div>
-  <div class="panel"><h3>Avisos no Discord</h3>
-    <p>Quando o PS5 liga chega uma mensagem, que é atualizada em silêncio a cada cópia. Quando ele desliga, ela é trocada por um resumo da sessão. São dois avisos por sessão, e nada de uma mensagem por save.</p>
-    <div class="f wide"><label for="hook"><b>Webhook</b><small>${w.set ? "Já configurado. Cole outro para trocar, ou salve vazio para desligar." : "Cole a URL do webhook do canal."}</small></label>
-      <div class="inline"><input type="password" id="hook" placeholder="${w.set ? "••••••••  configurado" : "https://discord.com/api/webhooks/…"}" autocomplete="off">
-      <button class="btn" id="hookSave">Salvar</button><button class="btn" id="hookTest">Enviar teste</button></div></div>
-    ${tog("notify.on_power", "Avisar quando o PS5 ligar e desligar", "O aviso de desligar traz o resumo da sessão.")}
-    ${tog("notify.on_backup", "Atualizar a mensagem a cada cópia", "É uma edição da mesma mensagem; o Discord não notifica edições.")}
-    ${num("notify.session_gap_hours", "Abrir mensagem nova depois de (horas) sem cópias", "", 1)}
-    ${tog("notify.on_error", "Avisar quando uma cópia falhar", "")}
-    ${num("notify.error_cooldown_minutes", "No máximo um aviso de falha a cada (minutos)", "")}
-    ${tog("notify.on_new_profile", "Avisar quando surgir um perfil novo", "")}
+  <div class="panel"><h3>${t("set_keep")}</h3>
+    <p>${t("set_keep_now", { size: mb(data.totals.bytes), trash: data.totals.trash_bytes ? t("set_keep_trash", { size: mb(data.totals.trash_bytes) }) : "", free: nf(data.totals.free_bytes / 1073741824) })}
+      ${t("set_keep_p")}</p>
+    ${num("retention.min_gap_minutes")}
+    ${tog("retention.thin_old_versions")}
+    ${num("retention.keep_all_hours")}
+    ${num("retention.keep_hourly_days")}
+    ${num("retention.keep_daily_days")}
+    ${num("retention.keep_weekly_weeks")}
+    ${num("retention.keep_min_versions", 1)}
+    ${num("retention.trash_days")}
+    ${num("retention.warn_total_gb")}
+    ${num("retention.warn_free_gb")}
   </div>
-  <div class="panel"><h3>Console</h3>
-    ${txt("ps5.host", "Endereço do PS5", "")}
-    ${num("ps5.ftp_port", "Porta do ftpsrv", "É por aqui que os saves são lidos.", 1)}
-    ${num("ps5.garlic_port", "Porta do Garlic SaveMgr", "Usada só no atalho de restauração.", 1)}
-    ${num("triggers.probe_interval_seconds", "Checar se o PS5 está ligado a cada (segundos)", "", 5)}
-    ${num("triggers.offline_after_failures", "Considerar desligado depois de (falhas seguidas)", "", 1)}
-    ${num("triggers.offline_grace_seconds", "Esperar antes de avisar que desligou (segundos)", "Quedas de rede mais curtas que isso não geram aviso de desligado e ligado.")}
+  <div class="panel"><h3>${t("set_notify")}</h3>
+    <p>${t("set_notify_p")}</p>
+    <div class="f wide"><label for="hook"><b>Webhook</b><small>${w.set ? t("hook_set") : t("hook_unset")}</small></label>
+      <div class="inline"><input type="password" id="hook" placeholder="${w.set ? t("hook_ph_set") : "https://discord.com/api/webhooks/…"}" autocomplete="off">
+      <button class="btn" id="hookSave">${t("save")}</button><button class="btn" id="hookTest">${t("send_test")}</button></div></div>
+    ${tog("notify.on_power")}
+    ${tog("notify.on_backup")}
+    ${num("notify.session_gap_hours", 1)}
+    ${tog("notify.on_error")}
+    ${num("notify.error_cooldown_minutes")}
+    ${tog("notify.on_new_profile")}
   </div>
-  <div class="savebar"><button class="go" id="saveCfg">Salvar ajustes</button></div>`;
+  <div class="panel"><h3>${t("set_console")}</h3>
+    ${txt("ps5.host")}
+    ${num("ps5.ftp_port", 1)}
+    ${num("ps5.garlic_port", 1)}
+    ${num("triggers.probe_interval_seconds", 5)}
+    ${num("triggers.offline_after_failures", 1)}
+    ${num("triggers.offline_grace_seconds")}
+  </div>
+  <div class="savebar"><button class="go" id="saveCfg">${t("save_settings")}</button></div>`;
   formDirty = false;
 }
 function collectConfig() {
@@ -518,7 +763,7 @@ function collectConfig() {
 /* ---------- painel ---------- */
 let statsFilter = "", statsData = null;
 const dur = slots => { const m = slots * 10, h = Math.floor(m / 60); return h ? `${h} h${m % 60 ? " " + (m % 60) + " min" : ""}` : `${m} min`; };
-const dayLabel = iso => new Date(iso + "T12:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", "");
+const dayLabel = iso => new Date(iso + "T12:00").toLocaleDateString(lang, { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", "");
 const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const profileName = uid => data.profiles.find(p => p.uid === uid)?.name || uid;
 
@@ -539,50 +784,50 @@ async function renderStats() {
     return `<span class="lab">${dayLabel(day)}</span>` + [...Array(24)].map((_, h) => {
       const active = new Set(), who = [];
       entries.forEach(([k, sl]) => { const mine = sl.filter(x => Math.floor(x / 6) === h);
-        if (mine.length) { mine.forEach(x => active.add(x)); const [u, t] = k.split("|"); who.push(`${gameName(t)} (${profileName(u)})`); } });
+        if (mine.length) { mine.forEach(x => active.add(x)); const [u, ti] = k.split("|"); who.push(`${gameName(ti)} (${profileName(u)})`); } });
       const v = active.size;
-      return v ? `<span class="c" data-v="${v}" data-tip="${esc(`${dayLabel(day)}, ${h}h: ${v * 10} min com saves sendo gravados. ${who.join(", ")}`)}"></span>` : `<span class="c"></span>`;
+      return v ? `<span class="c" data-v="${v}" data-tip="${esc(t("heat_tip", { day: dayLabel(day), h, min: v * 10, who: who.join(", ") }))}"></span>` : `<span class="c"></span>`;
     }).join("");
   }).join("");
 
   const maxT = ranked[0]?.[1] || 1;
-  const timeBars = ranked.slice(0, 8).map(([k, v]) => { const [u, t] = k.split("|");
-    return `<span class="name">${esc(gameName(t))} <small>· ${esc(profileName(u))}</small></span>
-      <span class="track" data-tip="${esc(`${gameName(t)} (${profileName(u)}): ${dur(v)} nos últimos ${DAYS} dias`)}"><div class="fill" style="width:${v / maxT * 100}%"></div></span><span class="val">${dur(v)}</span>`; }).join("");
-  const space = Object.entries(data.titles).filter(([, t]) => t.bytes).sort((a, b) => b[1].bytes - a[1].bytes);
+  const timeBars = ranked.slice(0, 8).map(([k, v]) => { const [u, ti] = k.split("|");
+    return `<span class="name">${esc(gameName(ti))} <small>· ${esc(profileName(u))}</small></span>
+      <span class="track" data-tip="${esc(t("time_tip", { game: gameName(ti), profile: profileName(u), time: dur(v), n: DAYS }))}"><div class="fill" style="width:${v / maxT * 100}%"></div></span><span class="val">${dur(v)}</span>`; }).join("");
+  const space = Object.entries(data.titles).filter(([, ti]) => ti.bytes).sort((a, b) => b[1].bytes - a[1].bytes);
   const maxS = space[0]?.[1].bytes || 1;
-  const spaceBars = space.map(([id, t]) => `<span class="name">${esc(t.name || id)}</span>
-      <span class="track" data-tip="${esc(`${t.name || id}: ${gb(t.bytes)} em versões guardadas`)}"><div class="fill" style="width:${t.bytes / maxS * 100}%"></div></span><span class="val">${gb(t.bytes)}</span>`).join("");
+  const spaceBars = space.map(([id, ti]) => `<span class="name">${esc(ti.name || id)}</span>
+      <span class="track" data-tip="${esc(t("space_tip", { game: ti.name || id, size: gb(ti.bytes) }))}"><div class="fill" style="width:${ti.bytes / maxS * 100}%"></div></span><span class="val">${gb(ti.bytes)}</span>`).join("");
 
   $("#tab-stats").innerHTML = `
     <div class="tiles">
-      <div class="tile"><b>${today ? dur(today) : "nada"}</b><small>de jogo registrado hoje</small></div>
-      <div class="tile"><b>${total ? dur(total) : "nada"}</b><small>nos últimos ${DAYS} dias</small></div>
-      <div class="tile"><b>${ranked.length ? esc(gameName(ranked[0][0].split("|")[1])) : "nenhum"}</b><small>jogo mais ativo</small></div>
-      <div class="tile"><b>${perDay && perDay[1] ? dayLabel(perDay[0]) : "nenhum"}</b><small>dia mais movimentado</small></div>
+      <div class="tile"><b>${today ? dur(today) : t("nothing")}</b><small>${t("tile_today")}</small></div>
+      <div class="tile"><b>${total ? dur(total) : t("nothing")}</b><small>${t("tile_days", { n: DAYS })}</small></div>
+      <div class="tile"><b>${ranked.length ? esc(gameName(ranked[0][0].split("|")[1])) : t("none")}</b><small>${t("tile_game")}</small></div>
+      <div class="tile"><b>${perDay && perDay[1] ? dayLabel(perDay[0]) : t("none")}</b><small>${t("tile_day")}</small></div>
     </div>
-    <div class="panel"><h3>Quando o console foi usado</h3>
-      <p>Cada quadrado é uma hora do dia. Quanto mais cheio, mais minutos daquela hora tiveram saves sendo gravados.</p>
-      <div class="chips-row"><button data-who="" aria-pressed="${!statsFilter}">Todos</button>${uids.map(u => `<button data-who="${esc(u)}" aria-pressed="${statsFilter === u}">${esc(profileName(u))}</button>`).join("")}</div>
+    <div class="panel"><h3>${t("heat_title")}</h3>
+      <p>${t("heat_p")}</p>
+      <div class="chips-row"><button data-who="" aria-pressed="${!statsFilter}">${t("everyone")}</button>${uids.map(u => `<button data-who="${esc(u)}" aria-pressed="${statsFilter === u}">${esc(profileName(u))}</button>`).join("")}</div>
       <div class="heat">${head}${rows}</div>
-      <div class="scale">menos ${[".24", ".4", ".55", ".7", ".85", "1"].map(a => `<i style="background:rgba(255,197,61,${a})"></i>`).join("")} mais <span style="margin-left:10px">(10 a 60 minutos por hora)</span></div>
+      <div class="scale">${t("less")} ${[".24", ".4", ".55", ".7", ".85", "1"].map(a => `<i style="background:rgba(255,197,61,${a})"></i>`).join("")} ${t("more")} <span style="margin-left:10px">${t("scale_note")}</span></div>
     </div>
     <div class="two">
-      <div class="panel"><h3>Tempo de jogo por save gravado</h3>
-        <p>Soma os períodos de 10 minutos em que o jogo gravou algum save. Jogos que salvam pouco aparecem com menos tempo do que foi jogado.</p>
-        ${timeBars ? `<div class="bars">${timeBars}</div>` : `<p>Sem atividade nos últimos ${DAYS} dias.</p>`}</div>
-      <div class="panel"><h3>Espaço por jogo</h3>
-        <p>Quanto cada jogo ocupa hoje em versões guardadas, somando todos os perfis.</p>
-        ${spaceBars ? `<div class="bars space">${spaceBars}</div>` : `<p>Nada guardado ainda.</p>`}</div>
+      <div class="panel"><h3>${t("time_title")}</h3>
+        <p>${t("time_p")}</p>
+        ${timeBars ? `<div class="bars">${timeBars}</div>` : `<p>${t("time_none", { n: DAYS })}</p>`}</div>
+      <div class="panel"><h3>${t("space_title")}</h3>
+        <p>${t("space_p")}</p>
+        ${spaceBars ? `<div class="bars space">${spaceBars}</div>` : `<p>${t("space_none")}</p>`}</div>
     </div>
-    <div class="panel"><h3>Espaço nos próximos 12 meses</h3>
-      <p>O ritmo dos últimos dias repetido por um ano, com as regras de limpeza aplicadas dia a dia. A linha contínua é o que já aconteceu; a tracejada é a projeção.</p>
+    <div class="panel"><h3>${t("curve_title")}</h3>
+      <p>${t("curve_p")}</p>
       ${curveSvg()}</div>`;
 }
 
 function curveSvg() {
   const p = data.projection;
-  if (!p || !p.curve) return `<p>Calculando a projeção…</p>`;
+  if (!p || !p.curve) return `<p>${t("curve_wait")}</p>`;
   const now = new Date(), past = Object.entries(statsData.sizes || {}).map(([day, b]) => [Math.round((new Date(day + "T12:00") - now) / 864e5), b])
     .filter(([d]) => d < 0 && d >= -60).sort((a, b) => a[0] - b[0]);
   const fut = p.curve, all = [...past, ...fut];
@@ -592,22 +837,22 @@ function curveSvg() {
   const path = pts => pts.map((q, i) => `${i ? "L" : "M"}${X(q[0]).toFixed(1)} ${Y(q[1]).toFixed(1)}`).join(" ");
   const grid = [0.25, 0.5, 0.75, 1].map(f => { const v = yMax * f / 1.15;
     return `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#353b82" stroke-width="1"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${gb(v)}</text>`; }).join("");
-  const marks = [[30, "30 dias"], [90, "90 dias"], [365, "1 ano"]].map(([d, label]) => { const b = fut.find(q => q[0] === d)?.[1] ?? 0;
+  const marks = [[30, t("d30")], [90, t("d90")], [365, t("y1")]].map(([d, label]) => { const b = fut.find(q => q[0] === d)?.[1] ?? 0;
     return `<circle cx="${X(d)}" cy="${Y(b)}" r="5" fill="#ffc53d" stroke="#1d2152" stroke-width="2"/>
       <text class="val" x="${X(d)}" y="${Y(b) - 12}" text-anchor="${d === 365 ? "start" : "middle"}" ${d === 365 ? `dx="10" dy="16"` : ""}>${gb(b)}</text>
       <text x="${X(d)}" y="${H - 10}" text-anchor="middle">${label}</text>`; }).join("");
   const pts = JSON.stringify(all.map(q => [q[0], q[1], +X(q[0]).toFixed(1), +Y(q[1]).toFixed(1)]));
-  return `<svg class="curve" viewBox="0 0 ${W} ${H}" data-pts='${pts}' role="img" aria-label="Projeção: ${gb(p.projected["30"])} em 30 dias, ${gb(p.projected["90"])} em 90 dias, ${gb(p.projected["365"])} em 1 ano">
+  return `<svg class="curve" viewBox="0 0 ${W} ${H}" data-pts='${pts}' role="img" aria-label="${esc(t("curve_aria", { a: gb(p.projected["30"]), b: gb(p.projected["90"]), c: gb(p.projected["365"]) }))}">
     ${grid}<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="#353b82"/>
-    <line x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${H - B}" stroke="#9a9ccb" stroke-dasharray="2 4"/><text x="${X(0)}" y="${H - 10}" text-anchor="middle">hoje</text>
+    <line x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${H - B}" stroke="#9a9ccb" stroke-dasharray="2 4"/><text x="${X(0)}" y="${H - 10}" text-anchor="middle">${t("today")}</text>
     ${past.length ? `<path d="${path([...past, fut[0]])}" fill="none" stroke="#ffc53d" stroke-width="2"/>` : ""}
     <path d="${path(fut)}" fill="none" stroke="#ffc53d" stroke-width="2" stroke-dasharray="6 5" stroke-linecap="round"/>
     <line class="cross" y1="${T}" y2="${H - B}" stroke="#e9e8f7" stroke-width="1" opacity="0"/><circle class="dot" r="5" fill="#e9e8f7" stroke="#1d2152" stroke-width="2" opacity="0"/>
     ${marks}</svg>`;
 }
 
-const tip = (text, e) => { const t = $("#tip"); if (!text) return t.classList.remove("on"); t.textContent = text; t.classList.add("on");
-  const w = t.offsetWidth; t.style.left = Math.min(window.innerWidth - w - 10, Math.max(10, e.clientX + 14)) + "px"; t.style.top = (e.clientY + 16) + "px"; };
+const tip = (text, e) => { const el = $("#tip"); if (!text) return el.classList.remove("on"); el.textContent = text; el.classList.add("on");
+  const w = el.offsetWidth; el.style.left = Math.min(window.innerWidth - w - 10, Math.max(10, e.clientX + 14)) + "px"; el.style.top = (e.clientY + 16) + "px"; };
 document.addEventListener("mousemove", e => {
   const svg = e.target.closest?.("svg.curve");
   if (svg) {
@@ -616,7 +861,7 @@ document.addEventListener("mousemove", e => {
     const cross = svg.querySelector(".cross"), dot = svg.querySelector(".dot");
     cross.setAttribute("x1", q[2]); cross.setAttribute("x2", q[2]); cross.setAttribute("opacity", ".5");
     dot.setAttribute("cx", q[2]); dot.setAttribute("cy", q[3]); dot.setAttribute("opacity", "1");
-    return tip(`${q[0] === 0 ? "Hoje" : q[0] < 0 ? `Há ${-q[0]} dias` : `Em ${q[0]} dias`}: ${gb(q[1])}`, e);
+    return tip(t(q[0] === 0 ? "tip_today" : q[0] < 0 ? "tip_past" : "tip_future", { n: Math.abs(q[0]), size: gb(q[1]) }), e);
   }
   document.querySelectorAll("svg.curve .cross, svg.curve .dot").forEach(el => el.setAttribute("opacity", "0"));
   tip(e.target.closest?.("[data-tip]")?.dataset.tip, e);
@@ -636,18 +881,18 @@ async function renderLog() {
   }
   const feed = groups.length ? `<ul class="feed">${groups.slice(0, 40).map(g => `<li>
       ${data.titles[g.s.title]?.icon ? `<img src="/art/${g.s.title}/icon0.png" alt="">` : `<span class="ph"></span>`}
-      <div><b>${esc(gameName(g.s.title))}</b> · ${plural(g.count, "cópia", "cópias")}
+      <div><b>${esc(gameName(g.s.title))}</b> · ${tn(g.count, "copies")}
         <small>${esc(g.s.profile.name)} · ${mb(g.bytes)} · ${[...g.names].map(([n, c]) => esc(n) + (c > 1 ? " ×" + c : "")).join(", ")}</small></div>
       <time title="${full(stampDate(g.newest))}">${ago(stampDate(g.newest))}</time></li>`).join("")}</ul>`
-    : `<div class="empty">Nenhuma cópia registrada ainda.</div>`;
+    : `<div class="empty">${t("feed_none")}</div>`;
   let lines = [];
   try { lines = (await (await fetch("/api/log")).json()).lines; } catch (e) {}
-  const keep = $("#tab-log details")?.open;
-  $("#tab-log").innerHTML = `<div class="panel"><h3>Cópias recentes</h3>${feed}</div>
-    <div class="panel"><h3>Integridade</h3><p>Refaz o checksum de todas as versões guardadas e compara com o que foi anotado na hora da cópia.</p>
-      <button class="btn" id="verify">Conferir agora</button> <span id="verifyOut" style="margin-left:10px;color:var(--mute)"></span>
-      <details ${keep ? "open" : ""} style="margin-top:18px"><summary style="cursor:pointer;color:var(--mute)">Registro técnico do serviço</summary>
-      <pre class="log">${esc(lines.join("\n")) || "Vazio."}</pre></details></div>`;
+  const keep = $("#tab-log details")?.open, out = $("#verifyOut")?.textContent || "";
+  $("#tab-log").innerHTML = `<div class="panel"><h3>${t("feed_title")}</h3>${feed}</div>
+    <div class="panel"><h3>${t("integrity")}</h3><p>${t("integrity_p")}</p>
+      <button class="btn" id="verify">${t("verify_now")}</button> <span id="verifyOut" style="margin-left:10px;color:var(--mute)">${esc(out)}</span>
+      <details ${keep ? "open" : ""} style="margin-top:18px"><summary style="cursor:pointer;color:var(--mute)">${t("tech_log")}</summary>
+      <pre class="log">${esc(lines.join("\n")) || t("log_empty")}</pre></details></div>`;
 }
 
 /* ---------- eventos ---------- */
@@ -657,7 +902,7 @@ document.addEventListener("click", async e => {
   if (el.dataset.tab) {
     tab = el.dataset.tab;
     document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", b === el));
-    ["cards", "stats", "settings", "log"].forEach(t => $("#tab-" + t).hidden = t !== tab);
+    ["cards", "stats", "settings", "log"].forEach(x => $("#tab-" + x).hidden = x !== tab);
     if (tab === "stats") renderStats();
     if (tab === "settings") renderSettings();
     if (tab === "log") renderLog();
@@ -666,26 +911,29 @@ document.addEventListener("click", async e => {
   else if (el.id === "closeDrawer") closeDrawer();
   else if (el.dataset.pin) {
     const [uid, title] = openKey.split("/"), pinned = el.getAttribute("aria-pressed") !== "true";
-    act(() => post("/api/pin", { uid, title, file: el.dataset.file, stamp: el.dataset.pin, pinned }), pinned ? "Versão fixada" : "Versão liberada");
+    act(() => post("/api/pin", { uid, title, file: el.dataset.file, stamp: el.dataset.pin, pinned }), pinned ? t("t_pinned") : t("t_unpinned"));
   }
-  else if (el.id === "go") { await act(() => post("/api/backup"), "Cópia iniciada"); }
-  else if (el.id === "saveCfg") { const ok = await act(() => post("/api/config", collectConfig()), "Ajustes salvos"); if (ok) renderSettings(); }
-  else if (el.id === "hookSave") { const ok = await act(() => post("/api/webhook", { url: $("#hook").value }), "Webhook salvo"); if (ok) renderSettings(); }
-  else if (el.id === "hookTest") act(() => post("/api/webhook/test"), "Teste enviado");
+  else if (el.id === "go") { await act(() => post("/api/backup"), t("t_started")); }
+  else if (el.id === "saveCfg") { const ok = await act(() => post("/api/config", collectConfig()), t("t_saved")); if (ok) renderSettings(); }
+  else if (el.id === "hookSave") { const ok = await act(() => post("/api/webhook", { url: $("#hook").value }), t("t_hook")); if (ok) renderSettings(); }
+  else if (el.id === "hookTest") act(() => post("/api/webhook/test"), t("t_test"));
   else if (el.id === "verify") {
-    $("#verifyOut").textContent = "Conferindo…";
+    $("#verifyOut").textContent = t("verifying");
+    let msg;
     try { const r = await post("/api/verify");
-      $("#verifyOut").textContent = r.bad.length ? `${r.bad.length} com problema: ${r.bad.join(", ")}` : `${plural(r.ok, "versão íntegra", "versões íntegras")}, nenhuma com problema.`; }
-    catch (err) { $("#verifyOut").textContent = err.message; }
+      msg = r.bad.length ? t("verify_bad", { n: r.bad.length, list: r.bad.join(", ") }) : tn(r.ok, "verify_ok"); }
+    catch (err) { msg = err.message; }
+    if ($("#verifyOut")) $("#verifyOut").textContent = msg;
   }
 });
 document.addEventListener("change", e => {
   const el = e.target;
-  if (el.dataset.profile) {
+  if (el.id === "uiLang") setLang(el.value);
+  else if (el.dataset.profile) {
     act(() => post("/api/profile", { uid: el.dataset.profile, mode: el.checked ? "include" : "exclude" }),
-      el.checked ? "Perfil no backup" : "Perfil fora do backup");
+      el.checked ? t("t_profile_in") : t("t_profile_out"));
   } else if (el.dataset.title) {
-    act(() => post("/api/title", { id: el.dataset.title, excluded: !el.checked }), el.checked ? "Jogo no backup" : "Jogo fora do backup");
+    act(() => post("/api/title", { id: el.dataset.title, excluded: !el.checked }), el.checked ? t("t_game_in") : t("t_game_out"));
   } else if (el.dataset.path) formDirty = true;
 });
 document.addEventListener("input", e => { if (e.target.dataset.path) formDirty = true; });
@@ -696,6 +944,7 @@ document.addEventListener("toggle", e => {
 $("#scrim").addEventListener("click", closeDrawer);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
 
+applyStatic();
 refresh();
 setInterval(refresh, 4000);
 </script>

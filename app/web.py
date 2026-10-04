@@ -13,6 +13,7 @@ from pathlib import Path
 
 import ps5backup as core
 import projection
+from i18n import LANGS, Msg, tr
 
 PORT = 8765
 UI_DIR = Path(__file__).parent / "ui"
@@ -40,7 +41,7 @@ def overview():
     for vdir, meta in core.iter_versions():
         e = entry(meta["uid"], meta["title_id"], meta["file"])
         e["versions"].append({"stamp": vdir.name, "size": meta.get("size", 0), "sha256": meta.get("sha256", ""),
-                              "trigger": core.TRIGGER_LABEL.get(meta.get("trigger"), meta.get("trigger", "")),
+                              "trigger": meta.get("trigger", ""),
                               "label": meta.get("label", ""), "sub": meta.get("sub_title", ""),
                               "pinned": (vdir / core.PIN_NAME).exists()})
         total_bytes += meta.get("size", 0)
@@ -82,7 +83,7 @@ def overview():
                    "host": cfg["ps5"]["host"],
                    "garlic_url": f"http://{cfg['ps5']['host']}:{cfg['ps5']['garlic_port']}",
                    "last_run": state["meta"].get("last_run"), "last_ok": state["meta"].get("last_ok"),
-                   "last_trigger": core.TRIGGER_LABEL.get(state["meta"].get("last_trigger"), "")},
+                   "last_trigger": state["meta"].get("last_trigger", "")},
         "totals": {"saves": len(protected), "versions": total_versions, "bytes": total_bytes,
                    "trash_bytes": core.dir_bytes(core.TRASH_DIR),
                    "free_bytes": core.shutil.disk_usage(core.DATA_DIR).free,
@@ -107,6 +108,15 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+    @property
+    def lang(self):
+        """Idioma da interface (cabeçalho X-Lang), usado nas mensagens de erro."""
+        lang = self.headers.get("X-Lang", "")
+        return lang if lang in LANGS else core.DEFAULTS["notify"]["language"]
+
+    def t(self, key, **kw):
+        return tr(self.lang, key, **kw)
+
     def send_json(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode()
         self.send_response(code)
@@ -118,7 +128,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def send_file(self, path, content_type, download_name=None, cache=False):
         if not path.is_file():
-            return self.send_json({"error": "não encontrado"}, 404)
+            return self.send_json({"error": self.t("e_not_found")}, 404)
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(path.stat().st_size))
@@ -134,7 +144,7 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         parts = [p for p in path.split("/") if p]
         if any(not SEGMENT_RE.fullmatch(p) or ".." in p for p in parts):
-            return self.send_json({"error": "caminho inválido"}, 400)
+            return self.send_json({"error": self.t("e_bad_path")}, 400)
         if not parts:
             return self.send_file(UI_FILE, "text/html; charset=utf-8")
         if path in ("/logo.svg", "/mark.svg"):
@@ -156,16 +166,18 @@ class Handler(BaseHTTPRequestHandler):
             uid, title, fname, stamp = parts[1:]
             return self.send_file(core.SAVES_DIR / uid / title / fname / stamp / fname,
                                   "application/octet-stream", download_name=fname)
-        self.send_json({"error": "não encontrado"}, 404)
+        self.send_json({"error": self.t("e_not_found")}, 404)
 
     def do_POST(self):
         # Exigir JSON bloqueia formulários de outros sites (não respondemos CORS).
         if "application/json" not in self.headers.get("Content-Type", ""):
-            return self.send_json({"error": "envie JSON"}, 415)
+            return self.send_json({"error": self.t("e_send_json")}, 415)
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(min(length, 1 << 16)) or b"{}")
             self.send_json(self.route_post(self.path, body))
+        except Msg as e:
+            self.send_json({"error": e.text(self.lang)}, 400)
         except ValueError as e:
             self.send_json({"error": str(e)}, 400)
         except Exception as e:
@@ -175,9 +187,9 @@ class Handler(BaseHTTPRequestHandler):
         cfg = core.load_config()
         if path == "/api/backup":
             if core.STATUS["running"]:
-                raise ValueError("Já existe uma cópia em andamento.")
+                raise Msg("e_busy")
             if not core.ps5_online(cfg):
-                raise ValueError("O PS5 não está respondendo. Ligue o console e carregue o ftpsrv.")
+                raise Msg("e_offline")
             threading.Thread(target=core.safe_run, args=(cfg, "manual"), daemon=True).start()
             return {"ok": True}
         if path == "/api/config":
@@ -187,7 +199,7 @@ class Handler(BaseHTTPRequestHandler):
             uid, mode = body.get("uid", ""), body.get("mode")
             name = core.load_state()["profiles"].get(uid)
             if name is None or mode not in ("include", "exclude"):
-                raise ValueError("perfil ou modo inválido")
+                raise Msg("e_profile")
             flt = cfg["filter"]
             flt["include_profiles"] = set_membership(flt["include_profiles"], uid, name, mode == "include")
             flt["exclude_profiles"] = set_membership(flt["exclude_profiles"], uid, name, mode == "exclude")
@@ -197,7 +209,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/title":
             tid = body.get("id", "")
             if not core.TITLE_RE.fullmatch(tid):
-                raise ValueError("jogo inválido")
+                raise Msg("e_title")
             flt = cfg["filter"]
             flt["exclude_titles"] = [t for t in flt["exclude_titles"] if t != tid]
             if body.get("excluded"):
@@ -207,25 +219,25 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/webhook":
             url = str(body.get("url", "")).strip()
             if url and not url.startswith(("https://", "http://")):
-                raise ValueError("A URL precisa começar com https://")
+                raise Msg("e_url")
             core.set_webhook_url(url)
             return {"ok": True}
         if path == "/api/webhook/test":
             if not core.webhook_url():
-                raise ValueError("Nenhum webhook configurado.")
-            sent = core.send_embed(core.make_embed(
-                "🎮  Teste do Cartão de Memória", "Se você está lendo isto, os avisos estão chegando.",
-                0x7C8CFF, [("PS5", cfg["ps5"]["host"])]))
+                raise Msg("e_no_webhook")
+            lang = cfg["notify"]["language"]
+            sent = core.send_embed(core.make_embed(tr(lang, "test_title"), tr(lang, "test_body"),
+                                                   0x7C8CFF, [("PS5", cfg["ps5"]["host"])]))
             if core.is_discord(core.webhook_url()) and not sent:
-                raise ValueError("O Discord recusou o envio. Confira a URL do webhook.")
+                raise Msg("e_discord")
             return {"ok": True}
         if path == "/api/pin":
             parts = [str(body.get(k, "")) for k in ("uid", "title", "file", "stamp")]
             if any(not SEGMENT_RE.fullmatch(p) or ".." in p for p in parts):
-                raise ValueError("versão inválida")
+                raise Msg("e_version")
             vdir = core.SAVES_DIR.joinpath(*parts)
             if not (vdir / "meta.json").exists():
-                raise ValueError("versão não encontrada")
+                raise Msg("e_version_missing")
             if body.get("pinned"):
                 (vdir / core.PIN_NAME).touch()
             else:
@@ -233,7 +245,7 @@ class Handler(BaseHTTPRequestHandler):
             return {"ok": True}
         if path == "/api/verify":
             return core.verify_local()
-        raise ValueError("rota desconhecida")
+        raise Msg("e_unknown_route")
 
 
 def serve():
