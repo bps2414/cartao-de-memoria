@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import ps5backup as core
+import projection
 
 PORT = 8765
 UI_DIR = Path(__file__).parent / "ui"
@@ -90,6 +91,7 @@ def overview():
         "profiles": profiles, "titles": titles, "config": cfg,
         "webhook": {"set": bool(url), "discord": core.is_discord(url)},
         "session_open": bool(state["session"]),
+        "projection": projection.cached(cfg),
     }
 
 
@@ -135,8 +137,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"error": "caminho inválido"}, 400)
         if not parts:
             return self.send_file(UI_FILE, "text/html; charset=utf-8")
-        if path == "/logo.svg":
-            return self.send_file(UI_DIR / "logo.svg", "image/svg+xml", cache=True)
+        if path in ("/logo.svg", "/mark.svg"):
+            return self.send_file(UI_DIR / path[1:], "image/svg+xml", cache=True)
         if path == "/api/overview":
             return self.send_json(overview())
         if path == "/api/log":

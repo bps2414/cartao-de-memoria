@@ -64,6 +64,10 @@ cada um, baixar, fixar uma versão ou tirar o jogo do backup.
 regras de limpeza, avisos e endereço do console. A interface regrava o
 `config.toml`; editar o arquivo à mão também funciona.
 
+**Projeção de espaço.** Abaixo dos cartões, o painel estima quanto os backups
+vão ocupar em 30 dias, 90 dias e 1 ano. O cálculo repete o ritmo real de cópias
+dos últimos dias e simula cada dia futuro com as suas regras de limpeza.
+
 **Registro.** Cópias recentes, conferência de integridade e o log do serviço.
 
 ## Quando a cópia acontece

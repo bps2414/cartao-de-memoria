@@ -40,8 +40,8 @@ button { cursor: pointer; }
 /* ---------- barra superior ---------- */
 .top { display: flex; align-items: center; gap: 20px; padding: 18px 0; flex-wrap: wrap; }
 .brand { font: 700 15px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; }
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand img { width: 30px; height: 30px; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand img { height: 44px; width: auto; display: block; }
 .tabs { display: flex; gap: 4px; margin-left: auto; }
 .tabs button { background: none; border: 0; padding: 8px 14px; border-radius: 8px; color: var(--mute);
   font: 600 13px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
@@ -90,6 +90,15 @@ button.block:hover { transform: translateY(-3px); }
 .block.off::after { content: ""; position: absolute; inset: 0;
   background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(20,23,58,.55) 6px 8px); }
 .card-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; color: var(--mute); font-size: 13px; }
+.proj { margin-top: 34px; padding: 22px 24px 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--shell); }
+.proj h3 { margin: 0 0 6px; font: 600 12px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--slot); }
+.proj p { margin: 0; color: var(--mute); max-width: 78ch; }
+.proj-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0 16px; }
+.proj-row div { padding: 14px 16px; border-radius: 12px; background: var(--well); }
+.proj-row b { display: block; font: 600 26px/1.1 var(--display); }
+.proj-row div:first-child b { color: var(--slot); }
+.proj-row small { color: var(--mute); }
+@media (max-width: 640px) { .proj-row { grid-template-columns: repeat(2, 1fr); } }
 .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 30px; color: var(--mute); font-size: 13px; }
 .legend span { display: inline-flex; align-items: center; gap: 7px; }
 .legend i { width: 14px; height: 14px; border-radius: 4px; background: var(--shell-hi); display: inline-block; }
@@ -186,7 +195,7 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><img src="/logo.svg" alt="">Cartão de Memória</div>
+    <div class="brand"><img src="/mark.svg" alt="">Cartão de Memória</div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="cards" aria-selected="true">Cartões</button>
       <button role="tab" data-tab="settings" aria-selected="false">Ajustes</button>
@@ -209,6 +218,7 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
         <span><i class="o"></i>Fora do backup</span>
         <span><i class="e"></i>Espaço livre</span>
       </div>
+      <div class="proj" id="proj" hidden></div>
     </section>
     <section id="tab-settings" hidden></section>
     <section id="tab-log" hidden></section>
@@ -281,11 +291,33 @@ function render() {
   go.disabled = !!st.running || !st.online; go.classList.toggle("busy", !!st.running);
   go.textContent = st.running ? "Copiando" : "Copiar agora";
   renderCards();
+  renderProjection();
   if (openKey) renderDrawer();
   if (tab === "log") renderLog();
   if (tab === "settings" && !formDirty) renderSettings();
 }
 
+const gb = b => b < 1073741824 ? mb(b) : (b / 1073741824).toFixed(b < 10737418240 ? 1 : 0).replace(".", ",") + " GB";
+function renderProjection() {
+  const p = data.projection, box = $("#proj");
+  box.hidden = !p;
+  if (!p) return;
+  const year = p.projected["365"], share = year / (p.free_bytes + p.now_bytes) * 100;
+  const basis = p.window_days === 1 ? "de hoje" : `dos últimos ${p.window_days} dias`;
+  const pace = p.copies_per_day
+    ? `Repetindo o ritmo ${basis}: ${String(p.copies_per_day).replace(".", ",")} cópias e ${gb(p.raw_bytes_per_day)} lidos do PS5 por dia.`
+    : `Nenhuma cópia nova ${basis}; a projeção considera só o que já está guardado.`;
+  box.innerHTML = `<h3>Projeção de espaço</h3>
+    <p>${pace} Cada dia futuro é simulado com as regras de limpeza de Ajustes, não é uma linha reta.</p>
+    <div class="proj-row">
+      <div><b>${gb(p.now_bytes)}</b><small>hoje</small></div>
+      <div><b>${gb(p.projected["30"])}</b><small>em 30 dias</small></div>
+      <div><b>${gb(p.projected["90"])}</b><small>em 90 dias</small></div>
+      <div><b>${gb(year)}</b><small>em 1 ano</small></div>
+    </div>
+    <p>Em um ano isso seria ${share < 0.1 ? "menos de 0,1" : share.toFixed(1).replace(".", ",")}% do espaço que o disco tem hoje para os backups (${gb(p.free_bytes)} livres).
+      Sem a limpeza, o mesmo ritmo chegaria a ${gb(p.without_cleanup_year)}.${p.window_days < 7 ? ` A estimativa melhora conforme juntar mais dias de uso (hoje: ${p.window_days}).` : ""}</p>`;
+}
 function gamesOf(p) { // agrupa os saves do perfil por jogo
   const map = new Map();
   p.saves.forEach(s => { if (!map.has(s.title)) map.set(s.title, []); map.get(s.title).push(s); });

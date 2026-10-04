@@ -11,6 +11,7 @@ import hashlib
 import io
 import json
 import logging
+import logging.handlers
 import os
 import re
 import shutil
@@ -127,7 +128,8 @@ def save_config(cfg):
 def setup_logging():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S")
-    for handler in (logging.StreamHandler(sys.stdout), logging.FileHandler(LOG_FILE)):
+    rotating = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=5 << 20, backupCount=2)
+    for handler in (logging.StreamHandler(sys.stdout), rotating):
         handler.setFormatter(fmt)
         log.addHandler(handler)
     log.setLevel(logging.INFO)
