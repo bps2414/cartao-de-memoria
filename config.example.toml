@@ -33,6 +33,9 @@ offline_after_failures = 3
 # Só trata como desligado (e avisa no Discord) se ficar fora da rede por este tempo.
 # Quedas rápidas de Wi-Fi ou do ftpsrv não geram aviso.
 offline_grace_seconds = 180
+# Conferência de integridade: refaz o checksum de todas as versões guardadas a cada
+# tantos dias, com o PS5 ligado ou não. Só avisa no Discord se alguma não bater. 0 = desligado.
+verify_interval_days = 7
 
 [retention]
 # Rareia versões antigas em vez de apagar por idade. Fica: tudo das últimas

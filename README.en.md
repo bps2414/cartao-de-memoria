@@ -87,6 +87,16 @@ the moments the game wrote saves, so it is a lower-bound estimate.
 
 **Log.** Recent backups, the integrity check and the service log.
 
+## Integrity check
+
+Once a week the service recomputes the checksum of every stored version and
+compares it with the one recorded when it was copied. The PS5 does not need to
+be on. If everything matches, nothing happens; if a version does not (failing
+disk, file deleted by mistake), you get a Discord notification and the
+interface shows which ones. The interval is under **Settings › How much to
+keep** (`verify_interval_days`, 0 turns it off), and the **Check now** button
+in the Log tab runs it right away.
+
 ## When backups happen
 
 | Trigger | What it does |

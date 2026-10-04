@@ -35,6 +35,11 @@ TEXT = {
         "space_title": "📦  Atenção ao espaço dos backups",
         "space_body": "Os backups ocupam {used} GB e restam {free} GB livres no disco. "
                       "Nada foi apagado. Veja Ajustes › Quanto guardar.",
+        "verify_title": "⚠️  Conferência de integridade: {n} com problema",
+        "verify_body": "Estas versões guardadas não batem mais com o checksum anotado na hora da cópia "
+                       "(arquivo corrompido ou ausente). Nada foi apagado. Veja Registro › Integridade.",
+        "verify_more": "… e mais {n}",
+        "f_intact": "Versões íntegras",
         "test_title": "🎮  Teste do Cartão de Memória",
         "test_body": "Se você está lendo isto, os avisos estão chegando.",
         # erros da API
@@ -86,6 +91,11 @@ TEXT = {
         "space_title": "📦  Backup storage needs attention",
         "space_body": "Backups take up {used} GB and the disk has {free} GB free. "
                       "Nothing was deleted. See Settings › How much to keep.",
+        "verify_title": "⚠️  Integrity check: {n} with problems",
+        "verify_body": "These stored versions no longer match the checksum recorded when they were copied "
+                       "(corrupted or missing file). Nothing was deleted. See Log › Integrity.",
+        "verify_more": "… and {n} more",
+        "f_intact": "Intact versions",
         "test_title": "🎮  Cartão de Memória test",
         "test_body": "If you can read this, notifications are working.",
         "e_not_found": "not found",

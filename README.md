@@ -86,6 +86,15 @@ baixo.
 
 **Registro.** Cópias recentes, conferência de integridade e o log do serviço.
 
+## Conferência de integridade
+
+Uma vez por semana o serviço refaz o checksum de todas as versões guardadas e
+compara com o que foi anotado na hora da cópia. Não depende do PS5 estar ligado.
+Se tudo bate, nada acontece; se alguma versão não bate (disco com defeito,
+arquivo apagado por engano), chega um aviso no Discord e a interface mostra
+quais são. O intervalo fica em **Ajustes › Quanto guardar** (`verify_interval_days`,
+0 desliga), e o botão **Conferir agora** da aba Registro roda na hora.
+
 ## Quando a cópia acontece
 
 | Gatilho | O que faz |

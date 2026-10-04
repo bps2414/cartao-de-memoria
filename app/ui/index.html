@@ -372,6 +372,9 @@ const I18N = {
     feed_title: "Cópias recentes", feed_none: "Nenhuma cópia registrada ainda.",
     integrity: "Integridade", integrity_p: "Refaz o checksum de todas as versões guardadas e compara com o que foi anotado na hora da cópia.",
     verify_now: "Conferir agora", verifying: "Conferindo…", verify_bad: "{n} com problema: {list}",
+    verify_last: "Última conferência {ago}.", verify_never: "Nenhuma conferência feita ainda.",
+    integrity_bad: ["{n} versão guardada não bate com o checksum.", "{n} versões guardadas não batem com o checksum."],
+    "s_triggers.verify_interval_days": "Conferir a integridade sozinho a cada (dias)", "s_triggers.verify_interval_days_h": "Refaz o checksum de tudo o que está guardado, com o PS5 ligado ou não. Só avisa no Discord se algo não bater. 0 desliga.",
     verify_ok: ["{n} versão íntegra, nenhuma com problema.", "{n} versões íntegras, nenhuma com problema."],
     tech_log: "Registro técnico do serviço", log_empty: "Vazio.",
     t_pinned: "Versão fixada", t_unpinned: "Versão liberada", t_started: "Cópia iniciada", t_saved: "Ajustes salvos",
@@ -480,6 +483,9 @@ const I18N = {
     feed_title: "Recent backups", feed_none: "No backups recorded yet.",
     integrity: "Integrity", integrity_p: "Recomputes the checksum of every stored version and compares it with the one recorded when it was copied.",
     verify_now: "Check now", verifying: "Checking…", verify_bad: "{n} with problems: {list}",
+    verify_last: "Last checked {ago}.", verify_never: "No check has run yet.",
+    integrity_bad: ["{n} stored version no longer matches its checksum.", "{n} stored versions no longer match their checksum."],
+    "s_triggers.verify_interval_days": "Check integrity automatically every (days)", "s_triggers.verify_interval_days_h": "Recomputes the checksum of everything stored, whether the PS5 is on or not. Discord is only notified if something doesn't match. 0 turns it off.",
     verify_ok: ["{n} version intact, none with problems.", "{n} versions intact, none with problems."],
     tech_log: "Service technical log (in Portuguese)", log_empty: "Empty.",
     t_pinned: "Version pinned", t_unpinned: "Version unpinned", t_started: "Backup started", t_saved: "Settings saved",
@@ -561,6 +567,7 @@ function render() {
     ? tn(tt.saves, "headline", { saves: tn(tt.saves, "saves"), versions: tn(tt.versions, "versions"), size: mb(tt.bytes) })
     : t("headline_none");
   if (tt.over_limit) $("#headline").innerHTML += ` <span style="color:var(--bad)">${t("over_limit")}</span>`;
+  if (data.verify.bad.length) $("#headline").innerHTML += ` <span style="color:var(--bad)">${tn(data.verify.bad.length, "integrity_bad")}</span>`;
   $("#led").className = "led" + (st.online ? " on" : "");
   const when = st.last_run && ago(new Date(st.last_run.replace(" ", "T")));
   const last = !when ? "" : st.last_trigger ? t("last_check_why", { ago: when, why: trig(st.last_trigger) }) : t("last_check", { ago: when });
@@ -728,6 +735,7 @@ function renderSettings() {
     ${num("retention.trash_days")}
     ${num("retention.warn_total_gb")}
     ${num("retention.warn_free_gb")}
+    ${num("triggers.verify_interval_days")}
   </div>
   <div class="panel"><h3>${t("set_notify")}</h3>
     <p>${t("set_notify_p")}</p>
@@ -764,7 +772,7 @@ function collectConfig() {
 }
 
 /* ---------- painel ---------- */
-let statsFilter = "", statsData = null;
+let statsFilter = "", statsData = null, verifying = false;
 const dur = slots => { const m = slots * 10, h = Math.floor(m / 60); return h ? `${h} h${m % 60 ? " " + (m % 60) + " min" : ""}` : `${m} min`; };
 const dayLabel = iso => new Date(iso + "T12:00").toLocaleDateString(lang, { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", "");
 const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -890,10 +898,12 @@ async function renderLog() {
     : `<div class="empty">${t("feed_none")}</div>`;
   let lines = [];
   try { lines = (await (await fetch("/api/log")).json()).lines; } catch (e) {}
-  const keep = $("#tab-log details")?.open, out = $("#verifyOut")?.textContent || "";
+  const keep = $("#tab-log details")?.open, vf = data.verify;
+  const out = !vf.at ? t("verify_never") : t("verify_last", { ago: ago(new Date(vf.at * 1000)) }) + " "
+    + (vf.bad.length ? t("verify_bad", { n: vf.bad.length, list: vf.bad.join(", ") }) : tn(vf.ok, "verify_ok"));
   $("#tab-log").innerHTML = `<div class="panel"><h3>${t("feed_title")}</h3>${feed}</div>
     <div class="panel"><h3>${t("integrity")}</h3><p>${t("integrity_p")}</p>
-      <button class="btn" id="verify">${t("verify_now")}</button> <span id="verifyOut" style="margin-left:10px;color:var(--mute)">${esc(out)}</span>
+      <button class="btn" id="verify">${t("verify_now")}</button> <span id="verifyOut" style="margin-left:10px;color:var(${vf.bad.length ? "--bad" : "--mute"})">${verifying ? t("verifying") : esc(out)}</span>
       <details ${keep ? "open" : ""} style="margin-top:18px"><summary style="cursor:pointer;color:var(--mute)">${t("tech_log")}</summary>
       <pre class="log">${esc(lines.join("\n")) || t("log_empty")}</pre></details></div>`;
 }
@@ -921,12 +931,9 @@ document.addEventListener("click", async e => {
   else if (el.id === "hookSave") { const ok = await act(() => post("/api/webhook", { url: $("#hook").value }), t("t_hook")); if (ok) renderSettings(); }
   else if (el.id === "hookTest") act(() => post("/api/webhook/test"), t("t_test"));
   else if (el.id === "verify") {
-    $("#verifyOut").textContent = t("verifying");
-    let msg;
-    try { const r = await post("/api/verify");
-      msg = r.bad.length ? t("verify_bad", { n: r.bad.length, list: r.bad.join(", ") }) : tn(r.ok, "verify_ok"); }
-    catch (err) { msg = err.message; }
-    if ($("#verifyOut")) $("#verifyOut").textContent = msg;
+    verifying = true; $("#verifyOut").textContent = t("verifying");
+    try { await post("/api/verify"); } catch (err) { toast(err.message, true); }
+    verifying = false; await refresh(true);
   }
 });
 document.addEventListener("change", e => {

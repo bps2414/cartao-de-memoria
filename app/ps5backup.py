@@ -54,7 +54,7 @@ DEFAULTS = {
                  "on_save_change": True, "watch_interval_seconds": 30,
                  "schedule_interval_hours": 0, "schedule_daily_at": [],
                  "probe_interval_seconds": 10, "offline_after_failures": 3,
-                 "offline_grace_seconds": 180},
+                 "offline_grace_seconds": 180, "verify_interval_days": 7},
     "retention": {"thin_old_versions": True, "keep_all_hours": 1, "keep_hourly_days": 2,
                   "keep_daily_days": 14, "keep_weekly_weeks": 12, "keep_min_versions": 3,
                   "min_gap_minutes": 10, "trash_days": 7, "warn_total_gb": 20, "warn_free_gb": 10},
@@ -824,6 +824,7 @@ def daemon(cfg):
     offline_since = None  # sessão ainda aberta, esperando para saber se foi só uma queda rápida
     # Agendamento conta a partir de agora; o que venceu com o daemon parado não é reexecutado.
     last_sched = time.time()
+    verifier, next_verify_check = None, 0.0
     while True:
         try:
             cfg = load_config()  # ajustes feitos na interface valem na hora
@@ -831,6 +832,12 @@ def daemon(cfg):
             log.warning("config.toml inválido (%s); mantendo os ajustes anteriores", e)
         trig = cfg["triggers"]
         now = time.time()
+        if now >= next_verify_check and not (verifier and verifier.is_alive()):
+            # Conferência de integridade: não depende do PS5 e roda em paralelo à vigia.
+            next_verify_check = now + 300
+            if verify_due(cfg, load_state()["meta"], now):
+                verifier = threading.Thread(target=run_verify, args=(cfg,), daemon=True)
+                verifier.start()
         due = schedule_due(cfg, last_sched, now)
         if ps5_online(cfg):
             fails = 0
@@ -900,11 +907,50 @@ def verify_local():
     ok, bad = 0, []
     for vdir, meta in iter_versions():
         path = vdir / meta.get("file", "?")
-        if path.exists() and path.stat().st_size == meta.get("size") and sha256_file(path) == meta.get("sha256"):
+        try:
+            good = path.stat().st_size == meta.get("size") and sha256_file(path) == meta.get("sha256")
+        except OSError:
+            good = False
+        if good:
             ok += 1
-        else:
+        elif vdir.exists():  # se a pasta sumiu no meio da conferência, foi a limpeza que a tirou
             bad.append(str(path.relative_to(SAVES_DIR)))
     return {"ok": ok, "bad": bad}
+
+
+def verify_due(cfg, meta, now):
+    days = cfg["triggers"]["verify_interval_days"]
+    return bool(days) and now - meta.get("last_verify", 0) >= days * 86400
+
+
+def verify_and_record(cfg, notify):
+    """Confere todas as versões guardadas e anota o resultado (a interface mostra).
+    A conferência agendada passa notify=True e só avisa se alguma versão não bater."""
+    result = verify_local()
+    with locked():
+        state = load_state()
+        state["meta"].update({"last_verify": int(time.time()), "last_verify_ok": result["ok"],
+                              "last_verify_bad": result["bad"][:50]})
+        save_json(STATE_FILE, state)
+    if result["bad"]:
+        log.error("conferência de integridade: %d versões íntegras, %d com problema: %s",
+                  result["ok"], len(result["bad"]), ", ".join(result["bad"][:20]))
+        if notify and cfg["notify"]["on_error"]:
+            lang, bad = cfg["notify"]["language"], result["bad"]
+            more = "\n" + tr(lang, "verify_more", n=len(bad) - 15) if len(bad) > 15 else ""
+            send_embed(make_embed(tr(lang, "verify_title", n=len(bad)),
+                                  tr(lang, "verify_body") + "\n\n" + "\n".join(f"`{p}`" for p in bad[:15]) + more,
+                                  0xFF6B6B, [(tr(lang, "f_intact"), result["ok"])]))
+    else:
+        log.info("conferência de integridade: %d versões íntegras, nenhuma com problema", result["ok"])
+    return result
+
+
+def run_verify(cfg):
+    try:
+        verify_and_record(cfg, notify=True)
+    except Exception as e:
+        log.error("conferência de integridade falhou: %s: %s", type(e).__name__, e)
 
 
 def cmd_verify(cfg, remote):

@@ -92,6 +92,8 @@ def overview():
         "profiles": profiles, "titles": titles, "config": cfg,
         "webhook": {"set": bool(url), "discord": core.is_discord(url)},
         "session_open": bool(state["session"]),
+        "verify": {"at": state["meta"].get("last_verify"), "ok": state["meta"].get("last_verify_ok", 0),
+                   "bad": state["meta"].get("last_verify_bad", [])},
         "projection": projection.cached(cfg),
     }
 
@@ -244,7 +246,7 @@ class Handler(BaseHTTPRequestHandler):
                 (vdir / core.PIN_NAME).unlink(missing_ok=True)
             return {"ok": True}
         if path == "/api/verify":
-            return core.verify_local()
+            return core.verify_and_record(cfg, notify=False)
         raise Msg("e_unknown_route")
 
 

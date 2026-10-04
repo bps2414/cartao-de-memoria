@@ -13,6 +13,9 @@ sys.path.insert(0, str(ROOT / "app"))
 
 import ps5backup as core  # noqa: E402
 
+core.log.propagate = False  # o log do serviço não polui a saída dos testes
+core.log.addHandler(__import__("logging").NullHandler())
+
 RULES = dict(core.DEFAULTS["retention"])
 
 
