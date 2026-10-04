@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cartão de Memória</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Martian+Mono:wght@400;500&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
@@ -39,8 +40,8 @@ button { cursor: pointer; }
 /* ---------- barra superior ---------- */
 .top { display: flex; align-items: center; gap: 20px; padding: 18px 0; flex-wrap: wrap; }
 .brand { font: 700 15px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; }
-.brand i { display: inline-block; width: 11px; height: 14px; margin-right: 9px; background: var(--slot);
-  clip-path: polygon(0 0, 68% 0, 100% 26%, 100% 100%, 0 100%); vertical-align: -2px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand img { width: 30px; height: 30px; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); }
 .tabs { display: flex; gap: 4px; margin-left: auto; }
 .tabs button { background: none; border: 0; padding: 8px 14px; border-radius: 8px; color: var(--mute);
   font: 600 13px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
@@ -185,7 +186,7 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><i></i>Cartão de Memória</div>
+    <div class="brand"><img src="/logo.svg" alt="">Cartão de Memória</div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="cards" aria-selected="true">Cartões</button>
       <button role="tab" data-tab="settings" aria-selected="false">Ajustes</button>
@@ -393,20 +394,22 @@ function renderSettings() {
       `<select id="filter.new_profiles" data-path="filter.new_profiles" data-kind="str">
         <option value="include" ${c.filter.new_profiles === "include" ? "selected" : ""}>Entra no backup</option>
         <option value="exclude" ${c.filter.new_profiles === "exclude" ? "selected" : ""}>Fica de fora</option></select>`)}
-    ${titles.map(([id, t]) => `<div class="f"><label><b>${esc(t.name || id)}</b><small class="mono">${esc(id)}</small></label>
+    ${titles.map(([id, t]) => `<div class="f"><label><b>${esc(t.name || id)}</b><small><span class="mono">${esc(id)}</span>${t.bytes ? " · " + mb(t.bytes) + " guardados" : ""}</small></label>
       <label class="sw"><input type="checkbox" data-title="${esc(id)}" ${t.excluded ? "" : "checked"}><span></span></label></div>`).join("")}
   </div>
   <div class="panel"><h3>Quanto guardar</h3>
-    <p>Hoje: ${mb(data.totals.bytes)} em versões guardadas${data.totals.trash_bytes ? ` e ${mb(data.totals.trash_bytes)} na lixeira` : ""}.
+    <p>Hoje: ${mb(data.totals.bytes)} em versões guardadas${data.totals.trash_bytes ? `, ${mb(data.totals.trash_bytes)} na lixeira` : ""} e ${(data.totals.free_bytes / 1073741824).toFixed(0)} GB livres no disco.
       As versões antigas são rareadas, nunca zeradas: fica a última de cada hora, depois de cada dia, de cada semana e, para sempre, de cada mês. As mais recentes de cada save e as que você fixar nunca saem.</p>
+    ${num("retention.min_gap_minutes", "Durante o jogo, guardar no máximo uma versão a cada (minutos)", "O estado mais recente é sempre guardado; só as cópias intermediárias são substituídas. 0 guarda todas.")}
     ${tog("retention.thin_old_versions", "Rarear versões antigas", "Desligado, tudo é guardado para sempre.")}
     ${num("retention.keep_all_hours", "Guardar todas as versões das últimas (horas)", "")}
     ${num("retention.keep_hourly_days", "Depois, uma por hora durante (dias)", "")}
     ${num("retention.keep_daily_days", "Depois, uma por dia até completar (dias)", "")}
     ${num("retention.keep_weekly_weeks", "Depois, uma por semana até completar (semanas)", "Daí em diante fica uma por mês, sem prazo.")}
     ${num("retention.keep_min_versions", "Nunca deixar um save com menos de (versões)", "", 1)}
-    ${num("retention.trash_days", "Manter na lixeira antes de apagar de vez (dias)", "O que sai vai para a pasta trash e ainda pode ser recuperado nesse prazo.")}
-    ${num("retention.warn_total_gb", "Avisar se passar de (GB)", "Só avisa. Passar do limite nunca apaga nada. 0 desliga o aviso.")}
+    ${num("retention.trash_days", "Manter na lixeira antes de apagar de vez (dias)", "Vale para versões com mais de alguns dias. Elas vão para a pasta trash e ainda podem ser recuperadas nesse prazo.")}
+    ${num("retention.warn_total_gb", "Avisar se os backups passarem de (GB)", "Só avisa. Passar do limite nunca apaga nada. 0 desliga o aviso.")}
+    ${num("retention.warn_free_gb", "Avisar se o disco tiver menos de (GB) livres", "0 desliga o aviso.")}
   </div>
   <div class="panel"><h3>Avisos no Discord</h3>
     <p>Cada sessão de jogo vira uma única mensagem, atualizada a cada cópia e fechada quando o PS5 desliga. Nada de uma mensagem por save.</p>

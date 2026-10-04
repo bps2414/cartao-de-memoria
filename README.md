@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.svg" width="96" alt=""></p>
+
 # Cartão de Memória
 
 Backup automático e versionado dos saves de um PS5 com jailbreak para um
@@ -32,8 +34,8 @@ Para restaurar um save você também vai querer o
 ## Instalação
 
 ```sh
-git clone https://github.com/bps2414/ps5-save-backup.git
-cd ps5-save-backup
+git clone https://github.com/bps2414/cartao-de-memoria.git
+cd cartao-de-memoria
 cp config.example.toml config.toml
 cp .env.example .env
 ```
@@ -92,13 +94,20 @@ Desligar um perfil não apaga as versões que já estavam guardadas.
 
 ## Quanto espaço isso ocupa
 
-Alguns jogos regravam o save a cada minuto. Guardar tudo para sempre encheria o
-disco; apagar por idade deixaria você sem o save de meses atrás. Por isso as
-versões antigas são **rareadas**:
+Alguns jogos regravam o save a cada minuto (medido: ~17 vezes por hora, 6 MB
+cada, em 5 arquivos, o que daria uns 500 MB por hora de jogo). Guardar tudo
+encheria o disco; apagar por idade deixaria você sem o save de meses atrás. A
+solução tem duas etapas.
+
+**Durante o jogo:** a cópia mais recente é sempre guardada, mas só fica uma
+versão a cada 10 minutos. As intermediárias são substituídas pela seguinte.
+Você não perde nada ao desligar; só deixa de acumular uma versão por minuto.
+
+**Com o tempo:** as versões antigas são rareadas, nunca zeradas.
 
 | Idade da versão | O que fica |
 |---|---|
-| Última hora | Todas |
+| Última hora | Todas (uma a cada 10 min) |
 | Até 2 dias | A última de cada hora |
 | Até 14 dias | A última de cada dia |
 | Até 12 semanas | A última de cada semana |
@@ -106,18 +115,28 @@ versões antigas são **rareadas**:
 
 Travas de segurança:
 
+- A limpeza só mexe na pasta de backup. No PS5 nada é apagado nem alterado.
 - As 3 versões mais novas de cada save nunca saem.
 - Versões **fixadas** nunca saem. Fixe o save de antes de um chefe, de um final, de uma decisão.
-- A limpeza só mexe na pasta de backup. No PS5 nada é apagado nem alterado.
-- O que sai vai para `data/trash/` e só é apagado de vez depois de 7 dias. Para
-  recuperar, mova a pasta de volta para o mesmo caminho em `data/saves/`.
-- O limite de espaço **só avisa**. Passar dele nunca apaga nada.
+- Versões com mais de 2 dias, quando rareadas, vão para `data/trash/` e só são
+  apagadas de vez depois de 7 dias. Para recuperar, mova a pasta de volta para o
+  mesmo caminho em `data/saves/`.
+- Os limites de espaço (tamanho dos backups e espaço livre no disco) **só avisam**. Nunca apagam nada.
 - Desligar um perfil ou um jogo, ou o save sumir do console, não apaga nada.
 
-Numa simulação de um save de 6 MB regravado a cada minuto, 3 horas por dia,
-durante 200 dias: 36.000 versões (211 GB) viram 98 versões (0,6 GB).
+Projeção para um save de 6 MB regravado 17 vezes por hora, 3 horas por dia:
 
-Todos os números da tabela são ajustáveis, e a limpeza pode ser desligada.
+| | Sem limpeza | Com as regras padrão |
+|---|---|---|
+| 30 dias | 9 GB | 0,26 GB |
+| 200 dias | 61 GB | 0,34 GB |
+
+Um jogo com 5 saves assim fica em torno de 1,7 GB enquanto é jogado todo dia, e
+encolhe depois que você para de jogar. Comprimir não ajuda: as imagens são
+criptografadas (ganho medido de 1 a 2%).
+
+Todos os números são ajustáveis em **Ajustes › Quanto guardar**, que também
+mostra quanto cada jogo ocupa e quanto resta no disco.
 
 ## Avisos no Discord
 

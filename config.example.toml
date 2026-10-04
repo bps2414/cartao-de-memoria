@@ -37,16 +37,21 @@ offline_after_failures = 3
 # última de cada dia até keep_daily_days; depois a última de cada semana até
 # keep_weekly_weeks; e, para sempre, a última de cada mês.
 # Nunca saem: as keep_min_versions mais novas de cada save e as versões fixadas.
+# Jogos que regravam o save a cada minuto: a cópia mais recente é sempre guardada,
+# mas só fica uma versão a cada min_gap_minutes (as intermediárias são substituídas).
+min_gap_minutes = 10
 thin_old_versions = true
 keep_all_hours = 1
 keep_hourly_days = 2
 keep_daily_days = 14
 keep_weekly_weeks = 12
 keep_min_versions = 3
-# O que sai vai para a pasta trash/ e só é apagado de vez depois deste prazo.
+# Versões mais velhas que keep_hourly_days, quando rareadas, vão para trash/ e só
+# são apagadas de vez depois deste prazo. As mais novas saem direto.
 trash_days = 7
 # Só avisa (interface e Discord); passar do limite nunca apaga nada. 0 = sem aviso.
 warn_total_gb = 20
+warn_free_gb = 10      # avisa se o disco dos backups tiver menos que isso livre
 
 [notify]
 # O webhook é configurado na interface (fica em secrets.json na pasta de backup)

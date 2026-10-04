@@ -52,12 +52,14 @@ DEFAULTS = {
                  "probe_interval_seconds": 15, "offline_after_failures": 3},
     "retention": {"thin_old_versions": True, "keep_all_hours": 1, "keep_hourly_days": 2,
                   "keep_daily_days": 14, "keep_weekly_weeks": 12, "keep_min_versions": 3,
-                  "trash_days": 7, "warn_total_gb": 20},
+                  "min_gap_minutes": 10, "trash_days": 7, "warn_total_gb": 20, "warn_free_gb": 10},
     "notify": {"on_backup": True, "on_error": True, "on_new_profile": True,
                "error_cooldown_minutes": 60, "session_gap_hours": 6},
 }
 MINIMUMS = {"watch_interval_seconds": 10, "probe_interval_seconds": 5, "offline_after_failures": 1, "keep_min_versions": 1,
             "ftp_port": 1, "garlic_port": 1}
+# Avatar das mensagens no Discord (precisa ser uma URL pública; o Discord não lê SVG).
+AVATAR_URL = "https://raw.githubusercontent.com/bps2414/cartao-de-memoria/main/docs/logo.png"
 TRIGGER_LABEL = {"manual": "Manual", "power_on": "PS5 ligou", "save_changed": "Save alterado",
                  "schedule": "Agendamento"}
 
@@ -194,7 +196,8 @@ def send_embed(embed, message_id=None):
             text = "\n".join(x for x in (embed["title"], embed.get("description", "")) if x)
             _http("POST", url, text.encode(), "text/plain; charset=utf-8")
             return None
-        body = json.dumps({"username": "Cartão de Memória PS5", "embeds": [embed]}).encode()
+        body = json.dumps({"username": "Cartão de Memória", "avatar_url": AVATAR_URL,
+                           "embeds": [embed]}).encode()
         base = url.split("?")[0]
         if message_id:
             try:
@@ -450,6 +453,20 @@ def version_root(item):
     return SAVES_DIR / item["uid"] / item["title"] / item["file"]
 
 
+def superseded_version(stamps, gap_minutes):
+    """Jogos que regravam o save a cada minuto gerariam dezenas de versões por hora.
+    A cópia nova é sempre guardada; a anterior só é mantida se já estiver a pelo
+    menos `gap_minutes` da que veio antes dela. Devolve a versão a descartar (a
+    penúltima, depois que a nova entrou) ou None. `stamps` em ordem crescente."""
+    if gap_minutes <= 0 or len(stamps) < 3:
+        return None
+    try:
+        before, middle = (dt.datetime.strptime(x, STAMP_FMT) for x in stamps[-3:-1])
+    except ValueError:
+        return None
+    return stamps[-2] if (middle - before).total_seconds() < gap_minutes * 60 else None
+
+
 def run_backup(cfg, trigger, pending=None):
     """Uma rodada incremental. `pending` (modo vigia) exige que o arquivo apareça
     igual em duas varreduras seguidas antes de copiar. Devolve a lista de erros."""
@@ -515,6 +532,12 @@ def run_backup(cfg, trigger, pending=None):
                                "save": info["label"] or item["file"].removeprefix("sdimg_")})
                 log.info("NOVA VERSÃO %s/%s/%s (%s, %d bytes, sha256 %s…)", item["uid"],
                          item["title"], item["file"], stamp, item["size"], sha[:12])
+                root = version_root(item)
+                stamps = sorted(d.name for d in root.iterdir() if (d / "meta.json").exists())
+                old = superseded_version(stamps, cfg["retention"]["min_gap_minutes"])
+                if old and not (root / old / PIN_NAME).exists():
+                    shutil.rmtree(root / old)
+                    log.info("  substitui %s (intervalo menor que %d min)", old, cfg["retention"]["min_gap_minutes"])
             if pending is not None:
                 live = {i["rpath"] for i in items}
                 for key in [k for k in pending if k not in live]:
@@ -581,8 +604,9 @@ def versions_to_keep(stamps, pinned, rules, now):
 
 
 def prune(cfg):
-    """Rareia versões antigas. Nada é apagado na hora: o que sai vai para a
-    lixeira (trash/) e só é removido de vez depois de trash_days."""
+    """Rareia versões antigas. Versões recentes (dentro de keep_hourly_days) saem
+    direto, porque sempre sobra uma por hora. As mais velhas vão para a lixeira
+    (trash/) e só são removidas de vez depois de trash_days."""
     rules, removed, now = cfg["retention"], 0, dt.datetime.now()
     if rules["thin_old_versions"]:
         for fdir in SAVES_DIR.glob("*/*/*"):
@@ -591,6 +615,11 @@ def prune(cfg):
             keep = versions_to_keep(stamps, pinned, rules, now)
             for stamp in stamps:
                 if stamp in keep:
+                    continue
+                when = dt.datetime.strptime(stamp, STAMP_FMT)  # válido: nomes fora do padrão estão em keep
+                if (now - when).total_seconds() <= rules["keep_hourly_days"] * 86400:
+                    shutil.rmtree(fdir / stamp)
+                    removed += 1
                     continue
                 dest = TRASH_DIR / fdir.relative_to(SAVES_DIR) / stamp
                 dest.parent.mkdir(parents=True, exist_ok=True)
@@ -613,12 +642,17 @@ def dir_bytes(path):
 
 
 def check_size(cfg):
-    """Passar do limite nunca apaga nada: só avisa, no máximo uma vez por dia."""
-    limit = cfg["retention"]["warn_total_gb"]
+    """Passar dos limites nunca apaga nada: só avisa, no máximo uma vez por dia."""
+    rules = cfg["retention"]
     used = dir_bytes(SAVES_DIR) + dir_bytes(TRASH_DIR)
-    if not limit or used <= limit * 1024 ** 3:
+    free = shutil.disk_usage(DATA_DIR).free
+    over = rules["warn_total_gb"] and used > rules["warn_total_gb"] * 1024 ** 3
+    low = rules["warn_free_gb"] and free < rules["warn_free_gb"] * 1024 ** 3
+    if not over and not low:
         return
-    log.warning("os backups ocupam %.1f GB, acima do aviso de %d GB", used / 1024 ** 3, limit)
+    limit = rules["warn_total_gb"]
+    log.warning("espaço: backups ocupam %.1f GB (aviso em %d GB); %.1f GB livres no disco",
+                used / 1024 ** 3, limit, free / 1024 ** 3)
     with locked():
         state = load_state()
         if time.time() - state["meta"].get("last_size_warned", 0) < 86400:
@@ -626,9 +660,9 @@ def check_size(cfg):
         state["meta"]["last_size_warned"] = int(time.time())
         save_json(STATE_FILE, state)
     if cfg["notify"]["on_error"]:
-        send_embed(make_embed("📦  Os backups passaram do limite de espaço",
-                              f"Estão ocupando {used / 1024 ** 3:.1f} GB (aviso em {limit} GB). Nada foi apagado. "
-                              "Ajuste as regras em Ajustes › Quanto guardar.", 0xFFC53D))
+        send_embed(make_embed("📦  Atenção ao espaço dos backups",
+                              f"Os backups ocupam {used / 1024 ** 3:.1f} GB e restam {free / 1024 ** 3:.1f} GB livres "
+                              "no disco. Nada foi apagado. Veja Ajustes › Quanto guardar.", 0xFFC53D))
 
 
 def safe_run(cfg, trigger, pending=None):

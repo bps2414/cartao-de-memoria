@@ -14,7 +14,8 @@ from pathlib import Path
 import ps5backup as core
 
 PORT = 8765
-UI_FILE = Path(__file__).parent / "ui" / "index.html"
+UI_DIR = Path(__file__).parent / "ui"
+UI_FILE = UI_DIR / "index.html"
 SEGMENT_RE = re.compile(r"[A-Za-z0-9_.\-]+")
 
 
@@ -34,6 +35,7 @@ def overview():
         return saves[key]
 
     total_bytes = total_versions = 0
+    title_bytes = {}
     for vdir, meta in core.iter_versions():
         e = entry(meta["uid"], meta["title_id"], meta["file"])
         e["versions"].append({"stamp": vdir.name, "size": meta.get("size", 0), "sha256": meta.get("sha256", ""),
@@ -41,6 +43,7 @@ def overview():
                               "label": meta.get("label", ""), "sub": meta.get("sub_title", ""),
                               "pinned": (vdir / core.PIN_NAME).exists()})
         total_bytes += meta.get("size", 0)
+        title_bytes[meta["title_id"]] = title_bytes.get(meta["title_id"], 0) + meta.get("size", 0)
         total_versions += 1
     for c in state["console"].values():
         e = entry(c["uid"], c["title"], c["file"])
@@ -68,6 +71,7 @@ def overview():
                        "version": state["title_info"].get(tid, {}).get("version", ""),
                        "icon": (core.ART_DIR / tid / "icon0.png").exists(),
                        "pic": (core.ART_DIR / tid / "pic0.png").exists(),
+                       "bytes": title_bytes.get(tid, 0),
                        "excluded": not core.title_included(cfg, tid)}
 
     protected = [s for s in saves.values() if s["versions"]]
@@ -80,6 +84,7 @@ def overview():
                    "last_trigger": core.TRIGGER_LABEL.get(state["meta"].get("last_trigger"), "")},
         "totals": {"saves": len(protected), "versions": total_versions, "bytes": total_bytes,
                    "trash_bytes": core.dir_bytes(core.TRASH_DIR),
+                   "free_bytes": core.shutil.disk_usage(core.DATA_DIR).free,
                    "over_limit": bool(cfg["retention"]["warn_total_gb"])
                    and total_bytes > cfg["retention"]["warn_total_gb"] * 1024 ** 3},
         "profiles": profiles, "titles": titles, "config": cfg,
@@ -130,6 +135,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"error": "caminho inválido"}, 400)
         if not parts:
             return self.send_file(UI_FILE, "text/html; charset=utf-8")
+        if path == "/logo.svg":
+            return self.send_file(UI_DIR / "logo.svg", "image/svg+xml", cache=True)
         if path == "/api/overview":
             return self.send_json(overview())
         if path == "/api/log":
