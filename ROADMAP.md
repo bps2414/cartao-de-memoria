@@ -12,6 +12,14 @@ qualquer coisa que escreva no console entra desligada por padrão.
 - Limpeza segura: intervalo mínimo por sessão, rareamento, lixeira, versões fixadas.
 - Painel: mapa de uso, tempo de jogo estimado, espaço por jogo, projeção de 12 meses.
 - Avisos no Discord por sessão (liga, atualizações silenciosas, resumo ao desligar).
+- Interface e avisos em inglês, com dicionário pt-BR/en e README.en.md.
+- Testes automáticos (unittest) das regras de retenção, da limpeza, da validação
+  do config, da projeção e da senha.
+- Conferência de integridade agendada: `verify` sozinho uma vez por semana, com
+  aviso só se alguma versão não bater.
+- Janela do "jogando agora" configurável.
+- Senha opcional na interface (`WEB_PASSWORD`), cobrindo API e downloads.
+- Resumo semanal no Discord: tempo de jogo por jogo e perfil, e espaço.
 
 ## Próximo
 
@@ -20,12 +28,7 @@ qualquer coisa que escreva no console entra desligada por padrão.
    procedimento está descrito, mas não foi exercitado de ponta a ponta.
 2. **Imagem pronta.** Publicar a imagem no GitHub Container Registry para
    instalar sem `--build`.
-3. **Testes automáticos.** Cobrir as regras de retenção, o intervalo mínimo e a
-   projeção, que são as partes onde um erro apagaria versões.
-4. **Senha opcional na interface.** Hoje qualquer aparelho da rede local acessa.
-5. **Conferência agendada.** Rodar o `verify` sozinho uma vez por semana e
-   avisar se alguma versão guardada não bater com o checksum.
-6. **Segunda cópia.** Espelhar a pasta de backup para outro disco ou nuvem
+3. **Segunda cópia.** Espelhar a pasta de backup para outro disco ou nuvem
    (rclone ou restic), já que hoje o histórico vive em um disco só.
 
 ## Depois
@@ -33,7 +36,6 @@ qualquer coisa que escreva no console entra desligada por padrão.
 - **Restaurar pelo painel.** Botão "Restaurar no PS5" usando a API do Garlic
   SaveMgr. Desligado por padrão; antes de sobrescrever, copia e fixa o save
   atual; depois confere se o que ficou no console é a versão escolhida.
-- **Resumo semanal no Discord:** tempo de jogo por perfil, jogos, espaço.
 - **Saves de PS4** validados em console real (o código já copia `savedata/`
   com a chave `.bin`, mas não foi testado).
 - **Deduplicação por blocos, opcional.** Versões seguidas do mesmo save
@@ -41,7 +43,8 @@ qualquer coisa que escreva no console entra desligada por padrão.
   custo de as versões deixarem de ser arquivos comuns. Só se o espaço virar
   problema de verdade.
 - **Mais de um console** no mesmo servidor.
-- **Interface em inglês.**
+- **Registro técnico e linha de comando em inglês.** Hoje só a interface e os
+  avisos são traduzidos; o `backup.log` e o `ps5backup` continuam em português.
 
 ## Explorar: um payload próprio
 
