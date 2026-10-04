@@ -167,7 +167,8 @@ channel and hit **Send test**. When the PS5 turns on you get one message, which
 is quietly edited on every backup (Discord does not notify on edits). When it
 turns off, that message is replaced by a session summary: duration, games,
 backups and total storage. That is two notifications per session. Repeated
-failures produce at most one notice per hour.
+failures produce at most one notice per hour. The message lists as "playing
+now" the games that wrote saves in the last 15 minutes; the window is adjustable.
 
 The webhook is stored in `data/secrets.json`, outside the repository. Any other
 URL receives a plain-text POST (useful for ntfy, for example).

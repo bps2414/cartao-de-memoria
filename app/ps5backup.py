@@ -59,10 +59,11 @@ DEFAULTS = {
                   "keep_daily_days": 14, "keep_weekly_weeks": 12, "keep_min_versions": 3,
                   "min_gap_minutes": 10, "trash_days": 7, "warn_total_gb": 20, "warn_free_gb": 10},
     "notify": {"on_power": True, "on_backup": True, "on_error": True, "on_new_profile": True,
-               "error_cooldown_minutes": 60, "session_gap_hours": 6, "language": "pt-BR"},
+               "error_cooldown_minutes": 60, "session_gap_hours": 6, "now_playing_minutes": 15,
+               "language": "pt-BR"},
 }
 MINIMUMS = {"watch_interval_seconds": 10, "probe_interval_seconds": 5, "offline_after_failures": 1, "keep_min_versions": 1,
-            "ftp_port": 1, "garlic_port": 1}
+            "ftp_port": 1, "garlic_port": 1, "now_playing_minutes": 1}
 # Avatar das mensagens no Discord (precisa ser uma URL pública; o Discord não lê SVG).
 AVATAR_URL = "https://raw.githubusercontent.com/bps2414/cartao-de-memoria/main/docs/logo.png"
 
@@ -303,11 +304,12 @@ def session_embed(cfg, sess, closed):
                   (t("f_total"), f"{(dir_bytes(SAVES_DIR) + dir_bytes(TRASH_DIR)) / 1024 ** 3:.2f} GB")]
         return make_embed(t("off_title"), body or t("off_empty"), 0x5BE3A0 if versions else 0x95A5A6, fields)
     checked = (t("f_checked"), f"<t:{sess.get('checked', sess['updated'])}:R>")
+    window = cfg["notify"]["now_playing_minutes"]  # sem save novo nesse tempo, o jogo sai do "agora"
     if not versions:
         return make_embed(t("on_title"), t("on_body"), 0x7C8CFF, [(t("f_on"), f"<t:{sess['started']}:R>"), checked])
     recent = sorted({f"**{e['game']}** ({e['profile']})" for e in sess["entries"].values()
-                     if time.time() - e.get("last", 0) < 900})
-    now_playing = t("now_playing", games=", ".join(recent)) if recent else t("now_idle", n=15)
+                     if time.time() - e.get("last", 0) < window * 60})
+    now_playing = t("now_playing", games=", ".join(recent)) if recent else t("now_idle", n=window)
     return make_embed(t("saving_title"), f"{now_playing}\n\n{body}", 0xFFC53D, [
         (t("f_copies"), versions), (t("f_saves"), len(sess["entries"])), (t("f_read"), f"{size / 1048576:.1f} MB"),
         (t("f_on"), f"<t:{sess['started']}:R>"), (t("f_last_copy"), f"<t:{sess['updated']}:R>"), checked])
@@ -349,7 +351,7 @@ def session_record(cfg, state, copied, trigger):
 
 def session_refresh(cfg, every=300):
     """Mantém a mensagem viva mesmo sem cópias: a cada 5 minutos atualiza a hora da
-    última verificação e o "agora jogando" (que some depois de 15 min sem saves)."""
+    última verificação e o "agora jogando" (que some depois de now_playing_minutes sem saves)."""
     with locked():
         state = load_state()
         sess, now = state["session"], int(time.time())

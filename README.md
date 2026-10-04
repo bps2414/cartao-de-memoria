@@ -165,6 +165,8 @@ toque em **Enviar teste**. Quando o PS5 liga chega uma mensagem, que é editada
 em silêncio a cada cópia (o Discord não notifica edições). Quando ele desliga,
 ela é trocada por um resumo da sessão: duração, jogos, cópias e espaço total.
 São dois avisos por sessão. Falhas repetidas geram no máximo um aviso por hora.
+A mensagem mostra como "jogando agora" os jogos que gravaram saves nos últimos
+15 minutos; a janela é ajustável.
 
 O webhook fica em `data/secrets.json`, fora do repositório. Qualquer outra URL
 recebe um POST de texto simples (serve para ntfy, por exemplo).

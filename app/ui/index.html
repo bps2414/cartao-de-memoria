@@ -339,6 +339,7 @@ const I18N = {
     "s_notify.on_power": "Avisar quando o PS5 ligar e desligar", "s_notify.on_power_h": "O aviso de desligar traz o resumo da sessão.",
     "s_notify.on_backup": "Atualizar a mensagem a cada cópia", "s_notify.on_backup_h": "É uma edição da mesma mensagem; o Discord não notifica edições.",
     "s_notify.session_gap_hours": "Abrir mensagem nova depois de (horas) sem cópias",
+    "s_notify.now_playing_minutes": "Mostrar o jogo como “jogando agora” por (minutos)", "s_notify.now_playing_minutes_h": "Contados a partir do último save gravado. Jogos que salvam pouco pedem uma janela maior.",
     "s_notify.on_error": "Avisar quando uma cópia falhar",
     "s_notify.error_cooldown_minutes": "No máximo um aviso de falha a cada (minutos)",
     "s_notify.on_new_profile": "Avisar quando surgir um perfil novo",
@@ -446,6 +447,7 @@ const I18N = {
     "s_notify.on_power": "Notify when the PS5 turns on and off", "s_notify.on_power_h": "The power-off message includes the session summary.",
     "s_notify.on_backup": "Update the message on every backup", "s_notify.on_backup_h": "It edits the same message; Discord doesn't notify on edits.",
     "s_notify.session_gap_hours": "Start a new message after (hours) without backups",
+    "s_notify.now_playing_minutes": "Show a game as “playing now” for (minutes)", "s_notify.now_playing_minutes_h": "Counted from the last save written. Games that rarely save need a longer window.",
     "s_notify.on_error": "Notify when a backup fails",
     "s_notify.error_cooldown_minutes": "At most one failure notice every (minutes)",
     "s_notify.on_new_profile": "Notify when a new profile shows up",
@@ -735,6 +737,7 @@ function renderSettings() {
     ${tog("notify.on_power")}
     ${tog("notify.on_backup")}
     ${num("notify.session_gap_hours", 1)}
+    ${num("notify.now_playing_minutes", 1)}
     ${tog("notify.on_error")}
     ${num("notify.error_cooldown_minutes")}
     ${tog("notify.on_new_profile")}

@@ -66,4 +66,6 @@ on_error = true
 on_new_profile = true
 error_cooldown_minutes = 60
 session_gap_hours = 6
+# Um jogo aparece como "jogando agora" enquanto gravar saves dentro desta janela.
+now_playing_minutes = 15
 language = "pt-BR"   # idioma dos avisos: "pt-BR" ou "en"
