@@ -24,12 +24,15 @@ power_on_delay_seconds = 20
 # "desligar/repouso": com o PS5 fora da rede não dá para ler nada, então o
 # backup precisa já estar feito antes. Atraso máximo ~2x este intervalo.
 on_save_change = true
-watch_interval_seconds = 60
+watch_interval_seconds = 30
 # Conferência completa agendada (só com o PS5 online; se vencer offline, roda quando voltar).
 schedule_interval_hours = 6          # 0 = desligado
 schedule_daily_at = []               # ex.: ["04:00", "18:30"]
 probe_interval_seconds = 15
 offline_after_failures = 3
+# Só trata como desligado (e avisa no Discord) se ficar fora da rede por este tempo.
+# Quedas rápidas de Wi-Fi ou do ftpsrv não geram aviso.
+offline_grace_seconds = 180
 
 [retention]
 # Rareia versões antigas em vez de apagar por idade. Fica: tudo das últimas

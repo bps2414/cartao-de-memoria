@@ -500,6 +500,7 @@ function renderSettings() {
     ${num("ps5.garlic_port", "Porta do Garlic SaveMgr", "Usada só no atalho de restauração.", 1)}
     ${num("triggers.probe_interval_seconds", "Checar se o PS5 está ligado a cada (segundos)", "", 5)}
     ${num("triggers.offline_after_failures", "Considerar desligado depois de (falhas seguidas)", "", 1)}
+    ${num("triggers.offline_grace_seconds", "Esperar antes de avisar que desligou (segundos)", "Quedas de rede mais curtas que isso não geram aviso de desligado e ligado.")}
   </div>
   <div class="savebar"><button class="go" id="saveCfg">Salvar ajustes</button></div>`;
   formDirty = false;

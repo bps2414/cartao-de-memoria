@@ -49,9 +49,10 @@ DEFAULTS = {
     "filter": {"new_profiles": "include", "include_profiles": [], "exclude_profiles": [],
                "include_titles": [], "exclude_titles": []},
     "triggers": {"on_power_on": True, "power_on_delay_seconds": 20,
-                 "on_save_change": True, "watch_interval_seconds": 60,
+                 "on_save_change": True, "watch_interval_seconds": 30,
                  "schedule_interval_hours": 0, "schedule_daily_at": [],
-                 "probe_interval_seconds": 15, "offline_after_failures": 3},
+                 "probe_interval_seconds": 15, "offline_after_failures": 3,
+                 "offline_grace_seconds": 180},
     "retention": {"thin_old_versions": True, "keep_all_hours": 1, "keep_hourly_days": 2,
                   "keep_daily_days": 14, "keep_weekly_weeks": 12, "keep_min_versions": 3,
                   "min_gap_minutes": 10, "trash_days": 7, "warn_total_gb": 20, "warn_free_gb": 10},
@@ -298,13 +299,16 @@ def session_embed(sess, closed):
                   ("Total guardado", f"{(dir_bytes(SAVES_DIR) + dir_bytes(TRASH_DIR)) / 1024 ** 3:.2f} GB")]
         return make_embed("🔴  PS5 desligado · sessão encerrada",
                           body or "Nenhum save mudou nesta sessão.", 0x5BE3A0 if versions else 0x95A5A6, fields)
+    checked = ("Última verificação", f"<t:{sess.get('checked', sess['updated'])}:R>")
     if not versions:
-        return make_embed("🟢  PS5 ligado", "Vigiando os saves. Esta mensagem é atualizada a cada cópia.",
-                          0x7C8CFF, [("Desde", f"<t:{sess['started']}:t>")])
-    return make_embed("💾  Guardando os saves desta sessão", body, 0xFFC53D, [
+        return make_embed("🟢  PS5 ligado", "Vigiando os saves. Nenhum mudou desde que o console ligou.",
+                          0x7C8CFF, [("Ligado", f"<t:{sess['started']}:R>"), checked])
+    recent = sorted({f"**{e['game']}** ({e['profile']})" for e in sess["entries"].values()
+                     if time.time() - e.get("last", 0) < 900})
+    now_playing = "Agora: " + ", ".join(recent) if recent else "Nenhum save mudou nos últimos 15 minutos."
+    return make_embed("💾  Guardando os saves desta sessão", f"{now_playing}\n\n{body}", 0xFFC53D, [
         ("Cópias feitas", versions), ("Saves", len(sess["entries"])), ("Lido do PS5", f"{size / 1048576:.1f} MB"),
-        ("Início", f"<t:{sess['started']}:t>"), ("Última cópia", f"<t:{sess['updated']}:R>"),
-        ("Gatilho", sess.get("trigger", "-"))])
+        ("Ligado", f"<t:{sess['started']}:R>"), ("Última cópia", f"<t:{sess['updated']}:R>"), checked])
 
 
 def session_start(cfg, state):
@@ -334,12 +338,28 @@ def session_record(cfg, state, copied, trigger):
                                                   "save": c["save"], "count": 0, "bytes": 0})
         e["count"] += 1
         e["bytes"] += c["bytes"]
+        e["last"] = now
     sess["updated"], sess["trigger"] = now, TRIGGER_LABEL.get(trigger, trigger)
+    sess["checked"] = sess["edited"] = now
     if cfg["notify"]["on_backup"]:
         sess["message_id"] = send_embed(session_embed(sess, False), sess["message_id"])
 
 
-def session_close(cfg, state):
+def session_refresh(cfg, every=300):
+    """Mantém a mensagem viva mesmo sem cópias: a cada 5 minutos atualiza a hora da
+    última verificação e o "agora jogando" (que some depois de 15 min sem saves)."""
+    with locked():
+        state = load_state()
+        sess, now = state["session"], int(time.time())
+        if not sess or not sess.get("message_id") or now - sess.get("edited", sess["started"]) < every:
+            return
+        sess["checked"] = sess["edited"] = now
+        if cfg["notify"]["on_backup"]:
+            sess["message_id"] = send_embed(session_embed(sess, False), sess["message_id"])
+        save_json(STATE_FILE, state)
+
+
+def session_close(cfg, state, ended=None):
     """PS5 saiu da rede: troca a mensagem da sessão por um resumo novo (que notifica)."""
     sess = state["session"]
     state["session"] = None
@@ -347,7 +367,7 @@ def session_close(cfg, state):
         return
     copied = bool(sess["entries"])
     if (cfg["notify"]["on_power"] or (copied and cfg["notify"]["on_backup"])) and webhook_url():
-        sess["updated"] = int(time.time())  # a duração conta até o console sair da rede
+        sess["updated"] = int(ended or time.time())  # a duração conta até o console sair da rede
         discord_delete(sess.get("message_id"))
         send_embed(session_embed(sess, True))
 
@@ -797,6 +817,7 @@ def schedule_due(cfg, last_ts, now_ts):
 def daemon(cfg):
     log.info("daemon iniciado; PS5 %s (ftp %d)", cfg["ps5"]["host"], cfg["ps5"]["ftp_port"])
     online, fails, next_watch, pending, warned_missed = False, 0, 0.0, {}, False
+    offline_since = None  # sessão ainda aberta, esperando para saber se foi só uma queda rápida
     # Agendamento conta a partir de agora; o que venceu com o daemon parado não é reexecutado.
     last_sched = time.time()
     while True:
@@ -811,7 +832,9 @@ def daemon(cfg):
             fails = 0
             if not online:
                 online = STATUS["online"] = True
-                log.info("PS5 ONLINE (ftpsrv respondeu)")
+                blip = offline_since is not None
+                log.info("PS5 ONLINE (ftpsrv respondeu)%s", "; foi só uma queda rápida" if blip else "")
+                offline_since = None
                 with locked():
                     state = load_state()
                     session_start(cfg, state)
@@ -827,6 +850,7 @@ def daemon(cfg):
             elif trig["on_save_change"] and now >= next_watch:
                 safe_run(cfg, "save_changed", pending)
                 next_watch = time.time() + trig["watch_interval_seconds"]
+                session_refresh(cfg)
         else:
             fails += 1
             if STATUS["online"] is None:
@@ -834,14 +858,18 @@ def daemon(cfg):
             if online and fails >= trig["offline_after_failures"]:
                 online = STATUS["online"] = False
                 pending.clear()
+                offline_since = time.time()
+                # Limitação: com o PS5 fora da rede não há como ler nada. O que foi
+                # gravado depois da última varredura só entra no próximo boot.
+                log.info("PS5 OFFLINE (desligado/repouso/fora da rede). Última rodada sem falhas: %s",
+                         load_state()["meta"].get("last_ok", "nunca"))
+            if offline_since and time.time() - offline_since >= trig["offline_grace_seconds"]:
+                # Só agora é tratado como desligado de verdade: fecha a sessão e avisa.
                 with locked():
                     state = load_state()
-                    # Limitação: com o PS5 fora da rede não há como ler nada. O que foi
-                    # gravado depois da última varredura só entra no próximo boot.
-                    log.info("PS5 OFFLINE (desligado/repouso/fora da rede). Última rodada sem falhas: %s",
-                             state["meta"].get("last_ok", "nunca"))
-                    session_close(cfg, state)  # manda o resumo da sessão no Discord
+                    session_close(cfg, state, ended=offline_since)
                     save_json(STATE_FILE, state)
+                offline_since = None
             if due and not warned_missed:
                 warned_missed = True
                 log.info("agendamento vencido com o PS5 offline; roda quando ele voltar")

@@ -80,7 +80,7 @@ baixo.
 
 | Gatilho | O que faz |
 |---|---|
-| Save alterado | Olha os saves a cada 60 s e copia quando um muda e fica igual por duas leituras seguidas. |
+| Save alterado | Olha os saves a cada 30 s e copia quando um muda e fica igual por duas leituras seguidas. |
 | PS5 ligou | Copia assim que o ftpsrv responde depois do desbloqueio. |
 | Agendamento | Conferência completa por intervalo ou em horários fixos, com o PS5 ligado. |
 | Manual | Botão **Copiar agora** ou `docker compose exec ps5-backup ps5backup backup`. |
@@ -220,6 +220,10 @@ A cada ciclo o serviço lista `/user/home/<perfil>/savedata_prospero/<jogo>/`
 baixa só o que mudou e confere, relistando, que o arquivo não mudou durante a
 cópia. Nomes e artes vêm de `/user/appmeta` e do banco de saves do console.
 Testado com ftpsrv v0.21.1 no firmware 13.42.
+
+## Próximos passos
+
+Veja o [ROADMAP](ROADMAP.md), incluindo a avaliação de um payload próprio.
 
 ## Licença
 
