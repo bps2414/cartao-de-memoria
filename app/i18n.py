@@ -113,17 +113,17 @@ TEXT = {
 }
 
 
-def tr(lang, key, **kw):
+def tr(lang, name, /, **kw):
     table = TEXT.get(lang) or TEXT[DEFAULT_LANG]
-    return (table.get(key) or TEXT[DEFAULT_LANG][key]).format(**kw)
+    return (table.get(name) or TEXT[DEFAULT_LANG][name]).format(**kw)
 
 
 class Msg(ValueError):
     """Erro com texto traduzível. str() devolve em português (log e CLI)."""
 
-    def __init__(self, key, **kw):
-        self.key, self.kw = key, kw
-        super().__init__(tr(DEFAULT_LANG, key, **kw))
+    def __init__(self, name, /, **kw):
+        self.name, self.kw = name, kw
+        super().__init__(tr(DEFAULT_LANG, name, **kw))
 
     def text(self, lang):
-        return tr(lang, self.key, **self.kw)
+        return tr(lang, self.name, **self.kw)
