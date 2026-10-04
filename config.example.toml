@@ -28,7 +28,7 @@ watch_interval_seconds = 30
 # Conferência completa agendada (só com o PS5 online; se vencer offline, roda quando voltar).
 schedule_interval_hours = 6          # 0 = desligado
 schedule_daily_at = []               # ex.: ["04:00", "18:30"]
-probe_interval_seconds = 15
+probe_interval_seconds = 10
 offline_after_failures = 3
 # Só trata como desligado (e avisa no Discord) se ficar fora da rede por este tempo.
 # Quedas rápidas de Wi-Fi ou do ftpsrv não geram aviso.

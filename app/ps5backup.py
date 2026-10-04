@@ -51,7 +51,7 @@ DEFAULTS = {
     "triggers": {"on_power_on": True, "power_on_delay_seconds": 20,
                  "on_save_change": True, "watch_interval_seconds": 30,
                  "schedule_interval_hours": 0, "schedule_daily_at": [],
-                 "probe_interval_seconds": 15, "offline_after_failures": 3,
+                 "probe_interval_seconds": 10, "offline_after_failures": 3,
                  "offline_grace_seconds": 180},
     "retention": {"thin_old_versions": True, "keep_all_hours": 1, "keep_hourly_days": 2,
                   "keep_daily_days": 14, "keep_weekly_weeks": 12, "keep_min_versions": 3,
@@ -849,7 +849,8 @@ def daemon(cfg):
                 last_sched, warned_missed = time.time(), False
             elif trig["on_save_change"] and now >= next_watch:
                 safe_run(cfg, "save_changed", pending)
-                next_watch = time.time() + trig["watch_interval_seconds"]
+                # Com mudança pendente, confirma em 10 s em vez de esperar o intervalo inteiro.
+                next_watch = time.time() + (10 if pending else trig["watch_interval_seconds"])
                 session_refresh(cfg)
         else:
             fails += 1
