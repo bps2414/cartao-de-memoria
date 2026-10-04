@@ -141,6 +141,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(UI_DIR / path[1:], "image/svg+xml", cache=True)
         if path == "/api/overview":
             return self.send_json(overview())
+        if path == "/api/stats":
+            stats = core.load_stats()
+            return self.send_json({"slots": stats["slots"], "sizes": stats["sizes"]})
         if path == "/api/log":
             try:
                 lines = core.LOG_FILE.read_text(errors="replace").splitlines()[-400:]

@@ -68,6 +68,12 @@ regras de limpeza, avisos e endereço do console. A interface regrava o
 vão ocupar em 30 dias, 90 dias e 1 ano. O cálculo repete o ritmo real de cópias
 dos últimos dias e simula cada dia futuro com as suas regras de limpeza.
 
+**Painel.** Um mapa de quando o console foi usado (por hora, nos últimos 14
+dias, com filtro por perfil), o tempo de jogo estimado por jogo, o espaço que
+cada jogo ocupa e a curva de espaço projetada para 12 meses. O tempo de jogo é
+medido pelos momentos em que o jogo gravou saves, então é uma estimativa por
+baixo.
+
 **Registro.** Cópias recentes, conferência de integridade e o log do serviço.
 
 ## Quando a cópia acontece

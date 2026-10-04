@@ -32,6 +32,7 @@ SAVES_DIR = DATA_DIR / "saves"
 ART_DIR = DATA_DIR / "cache" / "art"
 STATE_FILE = DATA_DIR / "state.json"
 SECRETS_FILE = DATA_DIR / "secrets.json"
+STATS_FILE = DATA_DIR / "stats.json"
 LOG_FILE = DATA_DIR / "backup.log"
 TMP_DIR = DATA_DIR / ".tmp"
 TRASH_DIR = DATA_DIR / "trash"
@@ -163,6 +164,52 @@ def load_state():
         state.setdefault(key, {})
     state.setdefault("session", None)
     return state
+
+
+# ------------------------------------------------------------- estatísticas
+
+COPY_LINE_RE = re.compile(
+    r"^(\d{4}-\d\d-\d\d) (\d\d):(\d\d):(\d\d) INFO NOVA VERSÃO (\S+)/(\S+)/(\S+) \(\S+, (\d+) bytes")
+
+
+def note_activity(stats, uid, title, when):
+    """Marca o intervalo de 10 minutos em que um save daquele jogo foi gravado."""
+    slots = stats["slots"].setdefault(when.strftime("%Y-%m-%d"), {}).setdefault(f"{uid}|{title}", [])
+    slot = when.hour * 6 + when.minute // 10
+    if slot not in slots:
+        slots.append(slot)
+
+
+def load_stats():
+    """Atividade por dia (para o painel). Na primeira vez, reconstrói a partir da
+    hora em que o PS5 gravou cada versão já guardada."""
+    stats = load_json(STATS_FILE, None)
+    if stats is None:
+        stats = {"slots": {}, "sizes": {}}
+        cfg, state = load_config(), load_state()
+        for _, meta in iter_versions():
+            uid = meta.get("uid", "")
+            if profile_included(cfg, uid, state["profiles"].get(uid, "")):
+                note_activity(stats, uid, meta.get("title_id", ""),
+                              remote_write_time({"modify": meta.get("remote_mtime_utc", "")}))
+    return stats
+
+
+def save_stats(stats):
+    for part in ("slots", "sizes"):  # guarda pouco mais de um ano
+        for day in sorted(stats[part])[:-400]:
+            del stats[part][day]
+    stats["sizes"][time.strftime("%Y-%m-%d")] = dir_bytes(SAVES_DIR) + dir_bytes(TRASH_DIR)
+    save_json(STATS_FILE, stats)
+
+
+def remote_write_time(item):
+    """Hora em que o PS5 gravou o save (o MLSD informa em UTC), no fuso local."""
+    try:
+        utc = dt.datetime.strptime(item["modify"][:14], "%Y%m%d%H%M%S").replace(tzinfo=dt.timezone.utc)
+        return utc.astimezone().replace(tzinfo=None)
+    except ValueError:
+        return dt.datetime.now()
 
 
 # ------------------------------------------------------------ notificações
@@ -474,6 +521,7 @@ def run_backup(cfg, trigger, pending=None):
     igual em duas varreduras seguidas antes de copiar. Devolve a lista de erros."""
     with locked():
         state = load_state()
+        stats = load_stats()
         full = pending is None
         ftp = ftp_connect(cfg)
         errors, copied, same, waiting, nbytes = [], [], 0, 0, 0
@@ -530,6 +578,7 @@ def run_backup(cfg, trigger, pending=None):
                     "sha256": sha, "backed_up_at": stamp, "trigger": trigger})
                 state["files"][key] = {"sig": sig, "sha256": sha, "version": stamp}
                 nbytes += item["size"]
+                note_activity(stats, item["uid"], item["title"], remote_write_time(item))
                 copied.append({"key": key, "game": game, "profile": profile, "bytes": item["size"],
                                "save": info["label"] or item["file"].removeprefix("sdimg_")})
                 log.info("NOVA VERSÃO %s/%s/%s (%s, %d bytes, sha256 %s…)", item["uid"],
@@ -563,6 +612,8 @@ def run_backup(cfg, trigger, pending=None):
                      same, waiting, len(errors), len(all_items) - len(items))
         if copied:
             prune(cfg)
+        if full or copied:
+            save_stats(stats)
     for uid in new_profiles:
         name = state["profiles"].get(uid) or uid
         included = profile_included(cfg, uid, name)

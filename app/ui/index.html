@@ -169,6 +169,41 @@ details.save .ver { padding-left: 14px; border-bottom: 0; border-top: 1px solid 
 .savebar { position: sticky; bottom: 16px; display: flex; justify-content: flex-start; gap: 12px; align-items: center; margin-top: 8px; }
 .inline { display: flex; gap: 8px; }
 
+/* ---------- painel ---------- */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.tile { padding: 16px 18px; border-radius: 14px; background: var(--shell); border: 1px solid var(--line); }
+.tile b { display: block; font: 600 24px/1.15 var(--display); overflow-wrap: anywhere; }
+.tile small { color: var(--mute); }
+.chips-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 16px; }
+.chips-row button { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--line); background: none; font-size: 13px; color: var(--mute); }
+.chips-row button[aria-pressed=true] { background: var(--text); color: var(--console); border-color: var(--text); }
+.heat { display: grid; grid-template-columns: 78px repeat(24, 1fr); gap: 3px; align-items: center; }
+.heat .lab { color: var(--mute); font-size: 12px; white-space: nowrap; }
+.heat .hr { color: var(--mute); font: 400 10px var(--mono); text-align: left; }
+.heat .c { aspect-ratio: 1; max-height: 26px; border-radius: 4px; background: var(--well); }
+.heat .c[data-v="1"] { background: rgba(255,197,61,.24); } .heat .c[data-v="2"] { background: rgba(255,197,61,.4); }
+.heat .c[data-v="3"] { background: rgba(255,197,61,.55); } .heat .c[data-v="4"] { background: rgba(255,197,61,.7); }
+.heat .c[data-v="5"] { background: rgba(255,197,61,.85); } .heat .c[data-v="6"] { background: #ffc53d; }
+.heat .c[data-tip]:hover { outline: 2px solid var(--text); outline-offset: 1px; }
+.scale { display: flex; align-items: center; gap: 4px; margin-top: 14px; color: var(--mute); font-size: 12px; }
+.scale i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.bars { display: grid; grid-template-columns: minmax(120px, 34%) 1fr auto; gap: 10px 14px; align-items: center; margin-top: 14px; }
+.bars .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bars .name small { color: var(--mute); }
+.bars .track { height: 12px; }
+.bars .fill { height: 100%; min-width: 3px; border-radius: 0 4px 4px 0; background: var(--slot); }
+.bars.space .fill { background: #8f96ff; }
+.bars .val { font: 400 12px var(--mono); color: var(--text); white-space: nowrap; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.two .panel { margin-bottom: 20px; }
+svg.curve { width: 100%; height: auto; display: block; margin-top: 10px; overflow: visible; }
+svg.curve text { fill: var(--mute); font: 400 11px var(--body); }
+svg.curve .val { fill: var(--text); font-weight: 600; }
+#tip { position: fixed; z-index: 20; pointer-events: none; padding: 8px 11px; border-radius: 8px; background: var(--text); color: var(--console);
+  font-size: 12.5px; line-height: 1.4; max-width: 280px; opacity: 0; transition: opacity .1s; }
+#tip.on { opacity: 1; }
+@media (max-width: 760px) { .tiles { grid-template-columns: repeat(2, 1fr); } .two { grid-template-columns: 1fr; } .heat { grid-template-columns: 54px repeat(24, 1fr); gap: 2px; } }
+
 /* ---------- registro ---------- */
 .feed { list-style: none; margin: 0; padding: 0; }
 .feed li { display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
@@ -198,6 +233,7 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
     <div class="brand"><img src="/mark.svg" alt="">Cartão de Memória</div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="cards" aria-selected="true">Cartões</button>
+      <button role="tab" data-tab="stats" aria-selected="false">Painel</button>
       <button role="tab" data-tab="settings" aria-selected="false">Ajustes</button>
       <button role="tab" data-tab="log" aria-selected="false">Registro</button>
     </nav>
@@ -220,6 +256,7 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
       </div>
       <div class="proj" id="proj" hidden></div>
     </section>
+    <section id="tab-stats" hidden></section>
     <section id="tab-settings" hidden></section>
     <section id="tab-log" hidden></section>
   </main>
@@ -228,6 +265,7 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="Detalhes do save"></aside>
 <div class="toast" id="toast" role="status"></div>
+<div id="tip" role="tooltip"></div>
 
 <script>
 const $ = (s, el = document) => el.querySelector(s);
@@ -294,6 +332,7 @@ function render() {
   renderProjection();
   if (openKey) renderDrawer();
   if (tab === "log") renderLog();
+  if (tab === "stats") renderStats();
   if (tab === "settings" && !formDirty) renderSettings();
 }
 
@@ -474,6 +513,113 @@ function collectConfig() {
   return cfg;
 }
 
+/* ---------- painel ---------- */
+let statsFilter = "", statsData = null;
+const dur = slots => { const m = slots * 10, h = Math.floor(m / 60); return h ? `${h} h${m % 60 ? " " + (m % 60) + " min" : ""}` : `${m} min`; };
+const dayLabel = iso => new Date(iso + "T12:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", "");
+const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const profileName = uid => data.profiles.find(p => p.uid === uid)?.name || uid;
+
+async function renderStats() {
+  try { statsData = await (await fetch("/api/stats")).json(); } catch (e) { if (!statsData) return; }
+  const DAYS = 14, days = [...Array(DAYS)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return isoDay(d); });
+  const slotsOf = day => Object.entries(statsData.slots[day] || {}).filter(([k]) => !statsFilter || k.startsWith(statsFilter + "|"));
+  const perKey = new Map(); // tempo por jogo e perfil
+  days.forEach(day => slotsOf(day).forEach(([k, sl]) => perKey.set(k, (perKey.get(k) || 0) + sl.length)));
+  const ranked = [...perKey].sort((a, b) => b[1] - a[1]);
+  const today = slotsOf(days[0]).reduce((n, [, sl]) => n + sl.length, 0), total = ranked.reduce((n, [, v]) => n + v, 0);
+  const perDay = days.map(day => [day, slotsOf(day).reduce((n, [, sl]) => n + sl.length, 0)]).sort((a, b) => b[1] - a[1])[0];
+  const uids = [...new Set(days.flatMap(day => Object.keys(statsData.slots[day] || {}).map(k => k.split("|")[0])))];
+
+  const head = `<span></span>` + [...Array(24)].map((_, h) => `<span class="hr">${h % 3 ? "" : h}</span>`).join("");
+  const rows = days.map(day => {
+    const entries = slotsOf(day);
+    return `<span class="lab">${dayLabel(day)}</span>` + [...Array(24)].map((_, h) => {
+      const active = new Set(), who = [];
+      entries.forEach(([k, sl]) => { const mine = sl.filter(x => Math.floor(x / 6) === h);
+        if (mine.length) { mine.forEach(x => active.add(x)); const [u, t] = k.split("|"); who.push(`${gameName(t)} (${profileName(u)})`); } });
+      const v = active.size;
+      return v ? `<span class="c" data-v="${v}" data-tip="${esc(`${dayLabel(day)}, ${h}h: ${v * 10} min com saves sendo gravados. ${who.join(", ")}`)}"></span>` : `<span class="c"></span>`;
+    }).join("");
+  }).join("");
+
+  const maxT = ranked[0]?.[1] || 1;
+  const timeBars = ranked.slice(0, 8).map(([k, v]) => { const [u, t] = k.split("|");
+    return `<span class="name">${esc(gameName(t))} <small>· ${esc(profileName(u))}</small></span>
+      <span class="track" data-tip="${esc(`${gameName(t)} (${profileName(u)}): ${dur(v)} nos últimos ${DAYS} dias`)}"><div class="fill" style="width:${v / maxT * 100}%"></div></span><span class="val">${dur(v)}</span>`; }).join("");
+  const space = Object.entries(data.titles).filter(([, t]) => t.bytes).sort((a, b) => b[1].bytes - a[1].bytes);
+  const maxS = space[0]?.[1].bytes || 1;
+  const spaceBars = space.map(([id, t]) => `<span class="name">${esc(t.name || id)}</span>
+      <span class="track" data-tip="${esc(`${t.name || id}: ${gb(t.bytes)} em versões guardadas`)}"><div class="fill" style="width:${t.bytes / maxS * 100}%"></div></span><span class="val">${gb(t.bytes)}</span>`).join("");
+
+  $("#tab-stats").innerHTML = `
+    <div class="tiles">
+      <div class="tile"><b>${today ? dur(today) : "nada"}</b><small>de jogo registrado hoje</small></div>
+      <div class="tile"><b>${total ? dur(total) : "nada"}</b><small>nos últimos ${DAYS} dias</small></div>
+      <div class="tile"><b>${ranked.length ? esc(gameName(ranked[0][0].split("|")[1])) : "nenhum"}</b><small>jogo mais ativo</small></div>
+      <div class="tile"><b>${perDay && perDay[1] ? dayLabel(perDay[0]) : "nenhum"}</b><small>dia mais movimentado</small></div>
+    </div>
+    <div class="panel"><h3>Quando o console foi usado</h3>
+      <p>Cada quadrado é uma hora do dia. Quanto mais cheio, mais minutos daquela hora tiveram saves sendo gravados.</p>
+      <div class="chips-row"><button data-who="" aria-pressed="${!statsFilter}">Todos</button>${uids.map(u => `<button data-who="${esc(u)}" aria-pressed="${statsFilter === u}">${esc(profileName(u))}</button>`).join("")}</div>
+      <div class="heat">${head}${rows}</div>
+      <div class="scale">menos ${[".24", ".4", ".55", ".7", ".85", "1"].map(a => `<i style="background:rgba(255,197,61,${a})"></i>`).join("")} mais <span style="margin-left:10px">(10 a 60 minutos por hora)</span></div>
+    </div>
+    <div class="two">
+      <div class="panel"><h3>Tempo de jogo por save gravado</h3>
+        <p>Soma os períodos de 10 minutos em que o jogo gravou algum save. Jogos que salvam pouco aparecem com menos tempo do que foi jogado.</p>
+        ${timeBars ? `<div class="bars">${timeBars}</div>` : `<p>Sem atividade nos últimos ${DAYS} dias.</p>`}</div>
+      <div class="panel"><h3>Espaço por jogo</h3>
+        <p>Quanto cada jogo ocupa hoje em versões guardadas, somando todos os perfis.</p>
+        ${spaceBars ? `<div class="bars space">${spaceBars}</div>` : `<p>Nada guardado ainda.</p>`}</div>
+    </div>
+    <div class="panel"><h3>Espaço nos próximos 12 meses</h3>
+      <p>O ritmo dos últimos dias repetido por um ano, com as regras de limpeza aplicadas dia a dia. A linha contínua é o que já aconteceu; a tracejada é a projeção.</p>
+      ${curveSvg()}</div>`;
+}
+
+function curveSvg() {
+  const p = data.projection;
+  if (!p || !p.curve) return `<p>Calculando a projeção…</p>`;
+  const now = new Date(), past = Object.entries(statsData.sizes || {}).map(([day, b]) => [Math.round((new Date(day + "T12:00") - now) / 864e5), b])
+    .filter(([d]) => d < 0 && d >= -60).sort((a, b) => a[0] - b[0]);
+  const fut = p.curve, all = [...past, ...fut];
+  const W = 860, H = 280, L = 56, R = 70, T = 18, B = 34;
+  const x0 = all[0][0], x1 = 365, yMax = Math.max(...all.map(q => q[1])) * 1.15 || 1;
+  const X = d => L + (d - x0) / (x1 - x0) * (W - L - R), Y = b => H - B - b / yMax * (H - T - B);
+  const path = pts => pts.map((q, i) => `${i ? "L" : "M"}${X(q[0]).toFixed(1)} ${Y(q[1]).toFixed(1)}`).join(" ");
+  const grid = [0.25, 0.5, 0.75, 1].map(f => { const v = yMax * f / 1.15;
+    return `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#353b82" stroke-width="1"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${gb(v)}</text>`; }).join("");
+  const marks = [[30, "30 dias"], [90, "90 dias"], [365, "1 ano"]].map(([d, label]) => { const b = fut.find(q => q[0] === d)?.[1] ?? 0;
+    return `<circle cx="${X(d)}" cy="${Y(b)}" r="5" fill="#ffc53d" stroke="#1d2152" stroke-width="2"/>
+      <text class="val" x="${X(d)}" y="${Y(b) - 12}" text-anchor="${d === 365 ? "start" : "middle"}" ${d === 365 ? `dx="10" dy="16"` : ""}>${gb(b)}</text>
+      <text x="${X(d)}" y="${H - 10}" text-anchor="middle">${label}</text>`; }).join("");
+  const pts = JSON.stringify(all.map(q => [q[0], q[1], +X(q[0]).toFixed(1), +Y(q[1]).toFixed(1)]));
+  return `<svg class="curve" viewBox="0 0 ${W} ${H}" data-pts='${pts}' role="img" aria-label="Projeção: ${gb(p.projected["30"])} em 30 dias, ${gb(p.projected["90"])} em 90 dias, ${gb(p.projected["365"])} em 1 ano">
+    ${grid}<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="#353b82"/>
+    <line x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${H - B}" stroke="#9a9ccb" stroke-dasharray="2 4"/><text x="${X(0)}" y="${H - 10}" text-anchor="middle">hoje</text>
+    ${past.length ? `<path d="${path([...past, fut[0]])}" fill="none" stroke="#ffc53d" stroke-width="2"/>` : ""}
+    <path d="${path(fut)}" fill="none" stroke="#ffc53d" stroke-width="2" stroke-dasharray="6 5" stroke-linecap="round"/>
+    <line class="cross" y1="${T}" y2="${H - B}" stroke="#e9e8f7" stroke-width="1" opacity="0"/><circle class="dot" r="5" fill="#e9e8f7" stroke="#1d2152" stroke-width="2" opacity="0"/>
+    ${marks}</svg>`;
+}
+
+const tip = (text, e) => { const t = $("#tip"); if (!text) return t.classList.remove("on"); t.textContent = text; t.classList.add("on");
+  const w = t.offsetWidth; t.style.left = Math.min(window.innerWidth - w - 10, Math.max(10, e.clientX + 14)) + "px"; t.style.top = (e.clientY + 16) + "px"; };
+document.addEventListener("mousemove", e => {
+  const svg = e.target.closest?.("svg.curve");
+  if (svg) {
+    const pts = JSON.parse(svg.dataset.pts), box = svg.getBoundingClientRect(), mx = (e.clientX - box.left) / box.width * 860;
+    const q = pts.reduce((a, b) => Math.abs(b[2] - mx) < Math.abs(a[2] - mx) ? b : a);
+    const cross = svg.querySelector(".cross"), dot = svg.querySelector(".dot");
+    cross.setAttribute("x1", q[2]); cross.setAttribute("x2", q[2]); cross.setAttribute("opacity", ".5");
+    dot.setAttribute("cx", q[2]); dot.setAttribute("cy", q[3]); dot.setAttribute("opacity", "1");
+    return tip(`${q[0] === 0 ? "Hoje" : q[0] < 0 ? `Há ${-q[0]} dias` : `Em ${q[0]} dias`}: ${gb(q[1])}`, e);
+  }
+  document.querySelectorAll("svg.curve .cross, svg.curve .dot").forEach(el => el.setAttribute("opacity", "0"));
+  tip(e.target.closest?.("[data-tip]")?.dataset.tip, e);
+});
+
 /* ---------- registro ---------- */
 async function renderLog() {
   const events = allSaves().flatMap(s => s.versions.map(v => ({ s, v }))).sort((a, b) => b.v.stamp.localeCompare(a.v.stamp));
@@ -509,10 +655,12 @@ document.addEventListener("click", async e => {
   if (el.dataset.tab) {
     tab = el.dataset.tab;
     document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", b === el));
-    ["cards", "settings", "log"].forEach(t => $("#tab-" + t).hidden = t !== tab);
+    ["cards", "stats", "settings", "log"].forEach(t => $("#tab-" + t).hidden = t !== tab);
+    if (tab === "stats") renderStats();
     if (tab === "settings") renderSettings();
     if (tab === "log") renderLog();
   } else if (el.dataset.key) openDrawer(el.dataset.key);
+  else if (el.dataset.who !== undefined) { statsFilter = el.dataset.who; renderStats(); }
   else if (el.id === "closeDrawer") closeDrawer();
   else if (el.dataset.pin) {
     const [uid, title] = openKey.split("/"), pinned = el.getAttribute("aria-pressed") !== "true";

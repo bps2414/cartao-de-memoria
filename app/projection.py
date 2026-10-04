@@ -13,7 +13,7 @@ import ps5backup as core
 WINDOW_DAYS = 7
 HORIZONS = (30, 90, 365)
 CACHE_SECONDS = 900
-LINE_RE = re.compile(r"^(\d{4}-\d\d-\d\d) (\d\d):(\d\d):(\d\d) INFO NOVA VERSÃO (\S+)/(\S+)/(\S+) \(\S+, (\d+) bytes")
+LINE_RE = core.COPY_LINE_RE
 
 _cache = {"at": 0.0, "data": None, "busy": False}
 
@@ -58,6 +58,7 @@ def simulate(cfg, now=None):
             entry[1].add(vdir.name)
 
     totals = dict.fromkeys(HORIZONS, 0)
+    curve = [0] * (max(HORIZONS) + 1)  # espaço projetado em cada dia
     for key in set(current) | set(activity):
         kept, pinned, size = current.get(key, ([], set(), 0))
         kept = sorted(kept)
@@ -83,6 +84,7 @@ def simulate(cfg, now=None):
                         trash.append(d)
                 kept = [k for k in kept if k in keep]
             trash = [x for x in trash if d - x < rules["trash_days"]]
+            curve[d] += (len(kept) + len(trash)) * size
             if d in totals:
                 totals[d] += (len(kept) + len(trash)) * size
 
@@ -93,6 +95,7 @@ def simulate(cfg, now=None):
         "now_bytes": stored, "free_bytes": core.shutil.disk_usage(core.DATA_DIR).free,
         "projected": {str(h): int(totals[h]) for h in HORIZONS},
         "without_cleanup_year": int(stored + per_day * 365),
+        "curve": [[0, stored]] + [[d, curve[d]] for d in range(1, len(curve)) if d % 7 == 0 or d in HORIZONS],
         "computed_at": now.strftime("%Y-%m-%d %H:%M"),
     }
 
