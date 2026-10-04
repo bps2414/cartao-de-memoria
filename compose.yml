@@ -1,0 +1,17 @@
+services:
+  ps5-backup:
+    build: .
+    image: ps5-backup:local
+    container_name: ps5-backup
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      NOTIFY_URL: ${NOTIFY_URL:-}
+    ports:
+      # Interface web, só na rede local. Não encaminhe esta porta no roteador.
+      - "${WEB_PORT:-8765}:8765"
+    volumes:
+      # Gravável: a interface web salva os ajustes neste arquivo.
+      - ./config.toml:/config/config.toml
+      - ${BACKUP_DIR:-./data}:/data

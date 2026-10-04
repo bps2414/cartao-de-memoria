@@ -1,0 +1,228 @@
+"""Interface web: painel, ajustes e download das versões guardadas.
+
+Só lê e escreve no servidor (config.toml e pasta de backup). Nenhuma rota fala
+com o PS5 além de disparar a mesma rodada de backup somente-leitura do daemon.
+Sem autenticação: pensada para a rede local, não exponha na internet.
+"""
+import json
+import re
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+import ps5backup as core
+
+PORT = 8765
+UI_FILE = Path(__file__).parent / "ui" / "index.html"
+SEGMENT_RE = re.compile(r"[A-Za-z0-9_.\-]+")
+
+
+def overview():
+    cfg, state = core.load_config(), core.load_state()
+    saves = {}  # (uid, title, file) -> dict
+
+    def entry(uid, title, fname):
+        key = (uid, title, fname)
+        if key not in saves:
+            info = core.save_info(state, {"uid": uid, "title": title, "file": fname})
+            saves[key] = {"uid": uid, "title": title, "file": fname,
+                          "name": fname.removeprefix("sdimg_"), "label": info["label"],
+                          "sub": info["sub"], "detail": info["detail"],
+                          "is_system_copy": fname.startswith("sdimg_sce_bu_"),
+                          "on_console": False, "size": 0, "versions": []}
+        return saves[key]
+
+    total_bytes = total_versions = 0
+    for vdir, meta in core.iter_versions():
+        e = entry(meta["uid"], meta["title_id"], meta["file"])
+        e["versions"].append({"stamp": vdir.name, "size": meta.get("size", 0), "sha256": meta.get("sha256", ""),
+                              "trigger": core.TRIGGER_LABEL.get(meta.get("trigger"), meta.get("trigger", "")),
+                              "label": meta.get("label", ""), "sub": meta.get("sub_title", ""),
+                              "pinned": (vdir / core.PIN_NAME).exists()})
+        total_bytes += meta.get("size", 0)
+        total_versions += 1
+    for c in state["console"].values():
+        e = entry(c["uid"], c["title"], c["file"])
+        e["on_console"], e["size"] = True, c["size"]
+    for e in saves.values():
+        e["versions"].sort(key=lambda v: v["stamp"], reverse=True)
+
+    flt = cfg["filter"]
+    profiles = []
+    for uid, name in state["profiles"].items():
+        decided = ("exclude" if core.matches(flt["exclude_profiles"], uid, name) else
+                   "include" if core.matches(flt["include_profiles"], uid, name) else None)
+        seen = state["profile_seen"].get(uid, 0)
+        mine = sorted((s for s in saves.values() if s["uid"] == uid),
+                      key=lambda s: (s["title"], s["is_system_copy"], s["name"]))
+        profiles.append({"uid": uid, "name": name or uid, "decided": decided,
+                         "included": core.profile_included(cfg, uid, name),
+                         "is_new": decided is None and time.time() - seen < 7 * 86400,
+                         "saves": mine})
+    profiles.sort(key=lambda p: (not p["included"], p["name"].lower()))
+
+    titles = {}
+    for tid in {s["title"] for s in saves.values()} | set(flt["exclude_titles"]):
+        titles[tid] = {"name": state["titles"].get(tid, ""),
+                       "version": state["title_info"].get(tid, {}).get("version", ""),
+                       "icon": (core.ART_DIR / tid / "icon0.png").exists(),
+                       "pic": (core.ART_DIR / tid / "pic0.png").exists(),
+                       "excluded": not core.title_included(cfg, tid)}
+
+    protected = [s for s in saves.values() if s["versions"]]
+    url = core.webhook_url()
+    return {
+        "status": {"online": core.STATUS["online"], "running": core.STATUS["running"],
+                   "host": cfg["ps5"]["host"],
+                   "garlic_url": f"http://{cfg['ps5']['host']}:{cfg['ps5']['garlic_port']}",
+                   "last_run": state["meta"].get("last_run"), "last_ok": state["meta"].get("last_ok"),
+                   "last_trigger": core.TRIGGER_LABEL.get(state["meta"].get("last_trigger"), "")},
+        "totals": {"saves": len(protected), "versions": total_versions, "bytes": total_bytes,
+                   "trash_bytes": core.dir_bytes(core.TRASH_DIR),
+                   "over_limit": bool(cfg["retention"]["warn_total_gb"])
+                   and total_bytes > cfg["retention"]["warn_total_gb"] * 1024 ** 3},
+        "profiles": profiles, "titles": titles, "config": cfg,
+        "webhook": {"set": bool(url), "discord": core.is_discord(url)},
+        "session_open": bool(state["session"]),
+    }
+
+
+def set_membership(values, uid, name, present):
+    """Tira o perfil da lista (por ID ou nome) e, se pedido, recoloca pelo ID."""
+    kept = [v for v in values if v.lower() not in (uid.lower(), (name or "").lower())]
+    return kept + [uid] if present else kept
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "ps5backup"
+
+    def log_message(self, *args):
+        pass
+
+    def send_json(self, obj, code=200):
+        body = json.dumps(obj, ensure_ascii=False).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_file(self, path, content_type, download_name=None, cache=False):
+        if not path.is_file():
+            return self.send_json({"error": "não encontrado"}, 404)
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(path.stat().st_size))
+        self.send_header("Cache-Control", "max-age=86400" if cache else "no-store")
+        if download_name:
+            self.send_header("Content-Disposition", f'attachment; filename="{download_name}"')
+        self.end_headers()
+        with open(path, "rb") as f:
+            while chunk := f.read(1 << 16):
+                self.wfile.write(chunk)
+
+    def do_GET(self):
+        path = self.path.split("?")[0]
+        parts = [p for p in path.split("/") if p]
+        if any(not SEGMENT_RE.fullmatch(p) or ".." in p for p in parts):
+            return self.send_json({"error": "caminho inválido"}, 400)
+        if not parts:
+            return self.send_file(UI_FILE, "text/html; charset=utf-8")
+        if path == "/api/overview":
+            return self.send_json(overview())
+        if path == "/api/log":
+            try:
+                lines = core.LOG_FILE.read_text(errors="replace").splitlines()[-400:]
+            except FileNotFoundError:
+                lines = []
+            return self.send_json({"lines": lines})
+        if parts[0] == "art" and len(parts) == 3 and parts[2] in core.ART_FILES:
+            return self.send_file(core.ART_DIR / parts[1] / parts[2], "image/png", cache=True)
+        if parts[0] == "download" and len(parts) == 5:
+            uid, title, fname, stamp = parts[1:]
+            return self.send_file(core.SAVES_DIR / uid / title / fname / stamp / fname,
+                                  "application/octet-stream", download_name=fname)
+        self.send_json({"error": "não encontrado"}, 404)
+
+    def do_POST(self):
+        # Exigir JSON bloqueia formulários de outros sites (não respondemos CORS).
+        if "application/json" not in self.headers.get("Content-Type", ""):
+            return self.send_json({"error": "envie JSON"}, 415)
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(min(length, 1 << 16)) or b"{}")
+            self.send_json(self.route_post(self.path, body))
+        except ValueError as e:
+            self.send_json({"error": str(e)}, 400)
+        except Exception as e:
+            self.send_json({"error": f"{type(e).__name__}: {e}"}, 500)
+
+    def route_post(self, path, body):
+        cfg = core.load_config()
+        if path == "/api/backup":
+            if core.STATUS["running"]:
+                raise ValueError("Já existe uma cópia em andamento.")
+            if not core.ps5_online(cfg):
+                raise ValueError("O PS5 não está respondendo. Ligue o console e carregue o ftpsrv.")
+            threading.Thread(target=core.safe_run, args=(cfg, "manual"), daemon=True).start()
+            return {"ok": True}
+        if path == "/api/config":
+            core.save_config(body)
+            return {"ok": True}
+        if path == "/api/profile":
+            uid, mode = body.get("uid", ""), body.get("mode")
+            name = core.load_state()["profiles"].get(uid)
+            if name is None or mode not in ("include", "exclude"):
+                raise ValueError("perfil ou modo inválido")
+            flt = cfg["filter"]
+            flt["include_profiles"] = set_membership(flt["include_profiles"], uid, name, mode == "include")
+            flt["exclude_profiles"] = set_membership(flt["exclude_profiles"], uid, name, mode == "exclude")
+            core.save_config(cfg)
+            core.log.info("perfil %s (%s): %s", name, uid, "no backup" if mode == "include" else "fora do backup")
+            return {"ok": True}
+        if path == "/api/title":
+            tid = body.get("id", "")
+            if not core.TITLE_RE.fullmatch(tid):
+                raise ValueError("jogo inválido")
+            flt = cfg["filter"]
+            flt["exclude_titles"] = [t for t in flt["exclude_titles"] if t != tid]
+            if body.get("excluded"):
+                flt["exclude_titles"].append(tid)
+            core.save_config(cfg)
+            return {"ok": True}
+        if path == "/api/webhook":
+            url = str(body.get("url", "")).strip()
+            if url and not url.startswith(("https://", "http://")):
+                raise ValueError("A URL precisa começar com https://")
+            core.set_webhook_url(url)
+            return {"ok": True}
+        if path == "/api/webhook/test":
+            if not core.webhook_url():
+                raise ValueError("Nenhum webhook configurado.")
+            sent = core.send_embed(core.make_embed(
+                "🎮  Teste do Cartão de Memória", "Se você está lendo isto, os avisos estão chegando.",
+                0x7C8CFF, [("PS5", cfg["ps5"]["host"])]))
+            if core.is_discord(core.webhook_url()) and not sent:
+                raise ValueError("O Discord recusou o envio. Confira a URL do webhook.")
+            return {"ok": True}
+        if path == "/api/pin":
+            parts = [str(body.get(k, "")) for k in ("uid", "title", "file", "stamp")]
+            if any(not SEGMENT_RE.fullmatch(p) or ".." in p for p in parts):
+                raise ValueError("versão inválida")
+            vdir = core.SAVES_DIR.joinpath(*parts)
+            if not (vdir / "meta.json").exists():
+                raise ValueError("versão não encontrada")
+            if body.get("pinned"):
+                (vdir / core.PIN_NAME).touch()
+            else:
+                (vdir / core.PIN_NAME).unlink(missing_ok=True)
+            return {"ok": True}
+        if path == "/api/verify":
+            return core.verify_local()
+        raise ValueError("rota desconhecida")
+
+
+def serve():
+    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

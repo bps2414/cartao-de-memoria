@@ -1,0 +1,59 @@
+# Copie para config.toml. Tudo aqui também pode ser mudado pela interface web
+# (http://<servidor>:8765), que regrava este arquivo. O daemon relê a cada ciclo.
+
+[ps5]
+host = "192.168.1.50"   # IP do seu PS5 na rede local
+ftp_port = 2121        # ftpsrv (ps5-payload-dev): é por aqui que os saves são lidos
+garlic_port = 8082     # Garlic SaveMgr: usado só no atalho de restauração
+
+[filter]
+# Perfil sem decisão explícita segue esta regra: "include" ou "exclude".
+new_profiles = "include"
+# Perfis por ID (ex.: "1a2b3c4d") ou por nome. Excluir vence incluir.
+include_profiles = []
+exclude_profiles = []
+# Jogos por title ID. include vazio = todos.
+include_titles = []
+exclude_titles = ["PPSA01650"]   # YouTube
+
+[triggers]
+# Backup quando o PS5 liga e o ftpsrv fica disponível.
+on_power_on = true
+power_on_delay_seconds = 20
+# Vigia os saves e copia assim que um muda e estabiliza. É o que cobre
+# "desligar/repouso": com o PS5 fora da rede não dá para ler nada, então o
+# backup precisa já estar feito antes. Atraso máximo ~2x este intervalo.
+on_save_change = true
+watch_interval_seconds = 60
+# Conferência completa agendada (só com o PS5 online; se vencer offline, roda quando voltar).
+schedule_interval_hours = 6          # 0 = desligado
+schedule_daily_at = []               # ex.: ["04:00", "18:30"]
+probe_interval_seconds = 15
+offline_after_failures = 3
+
+[retention]
+# Rareia versões antigas em vez de apagar por idade. Fica: tudo das últimas
+# keep_all_hours; depois a última de cada hora por keep_hourly_days; depois a
+# última de cada dia até keep_daily_days; depois a última de cada semana até
+# keep_weekly_weeks; e, para sempre, a última de cada mês.
+# Nunca saem: as keep_min_versions mais novas de cada save e as versões fixadas.
+thin_old_versions = true
+keep_all_hours = 1
+keep_hourly_days = 2
+keep_daily_days = 14
+keep_weekly_weeks = 12
+keep_min_versions = 3
+# O que sai vai para a pasta trash/ e só é apagado de vez depois deste prazo.
+trash_days = 7
+# Só avisa (interface e Discord); passar do limite nunca apaga nada. 0 = sem aviso.
+warn_total_gb = 20
+
+[notify]
+# O webhook é configurado na interface (fica em secrets.json na pasta de backup)
+# ou em NOTIFY_URL no .env. No Discord, cada sessão de jogo é uma única mensagem
+# editada a cada cópia; depois de session_gap_hours sem cópias abre-se outra.
+on_backup = true
+on_error = true
+on_new_profile = true
+error_cooldown_minutes = 60
+session_gap_hours = 6

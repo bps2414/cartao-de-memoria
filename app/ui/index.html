@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartão de Memória</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Martian+Mono:wght@400;500&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --console: #14173a;      /* fundo */
+  --shell: #1d2152;        /* plástico do cartão */
+  --shell-hi: #2a2f6e;
+  --well: #0f1130;         /* poço do bloco */
+  --line: #353b82;
+  --text: #e9e8f7;
+  --mute: #9a9ccb;
+  --slot: #ffc53d;         /* âmbar: ação e contagem */
+  --ok: #5be3a0;
+  --bad: #ff6b6b;
+  --display: "Chakra Petch", "Trebuchet MS", sans-serif;
+  --body: "Onest", system-ui, sans-serif;
+  --mono: "Martian Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html { color-scheme: dark; }
+body {
+  margin: 0; min-height: 100vh; color: var(--text); font: 400 15px/1.5 var(--body);
+  background: radial-gradient(1200px 600px at 80% -10%, #2b2f7a 0%, transparent 60%), var(--console);
+  background-attachment: fixed;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--slot); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-size: .78em; letter-spacing: -.02em; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 80px; }
+
+/* ---------- barra superior ---------- */
+.top { display: flex; align-items: center; gap: 20px; padding: 18px 0; flex-wrap: wrap; }
+.brand { font: 700 15px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; }
+.brand i { display: inline-block; width: 11px; height: 14px; margin-right: 9px; background: var(--slot);
+  clip-path: polygon(0 0, 68% 0, 100% 26%, 100% 100%, 0 100%); vertical-align: -2px; }
+.tabs { display: flex; gap: 4px; margin-left: auto; }
+.tabs button { background: none; border: 0; padding: 8px 14px; border-radius: 8px; color: var(--mute);
+  font: 600 13px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
+.tabs button[aria-selected=true] { color: var(--console); background: var(--text); }
+.go { border: 0; border-radius: 10px; padding: 11px 18px; background: var(--slot); color: #2a1e00;
+  font: 700 13px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
+.go:disabled { opacity: .55; cursor: default; }
+.go.busy::after { content: ""; display: inline-block; width: 9px; height: 9px; margin-left: 9px; border-radius: 50%;
+  border: 2px solid #2a1e00; border-right-color: transparent; animation: spin .7s linear infinite; vertical-align: -1px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- cabeçalho de estado ---------- */
+.state { padding: 34px 0 30px; border-top: 1px solid var(--line); }
+.state h1 { margin: 0 0 12px; font: 600 clamp(26px, 4.4vw, 46px)/1.08 var(--display); letter-spacing: -.01em; max-width: 21ch; }
+.state h1 b { color: var(--slot); font-weight: 700; }
+.state p { margin: 0; color: var(--mute); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.led { width: 9px; height: 9px; border-radius: 50%; background: #5d6094; flex: none; }
+.led.on { background: var(--ok); box-shadow: 0 0 0 0 rgba(91,227,160,.6); animation: pulse 2.4s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 9px rgba(91,227,160,0); } 100% { box-shadow: 0 0 0 0 rgba(91,227,160,0); } }
+
+/* ---------- cartões (um por perfil) ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 26px; align-items: start; }
+.card { background: linear-gradient(160deg, var(--shell-hi), var(--shell) 55%); border: 1px solid var(--line);
+  border-radius: 18px; padding: 16px 16px 14px; position: relative;
+  clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 34px, 100% 100%, 0 100%);
+  transition: transform .25s, opacity .25s; }
+.card.out { opacity: .62; transform: translateY(10px); background: var(--shell); border-style: dashed; }
+.card-label { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 0 26px 14px 12px; border-left: 4px solid var(--slot); margin-bottom: 14px; }
+.card.out .card-label { border-left-color: #5d6094; }
+.card-label h2 { margin: 0; font: 700 22px/1.1 var(--display); letter-spacing: .01em; }
+.card-label small { color: var(--mute); display: block; margin-top: 5px; }
+.tag { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 5px; background: var(--slot); color: #2a1e00;
+  font: 700 10px/1.5 var(--display); letter-spacing: .1em; text-transform: uppercase; vertical-align: 3px; }
+.blocks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.block { aspect-ratio: 1; border-radius: 9px; border: 0; padding: 0; position: relative; background: var(--well);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.5); overflow: hidden; }
+button.block { background: var(--well) var(--art, none) center/cover; transition: transform .15s; }
+button.block:hover { transform: translateY(-3px); }
+.block .ini { position: absolute; inset: 0; display: grid; place-items: center; color: var(--mute); font: 500 10px var(--mono); }
+.block .n { position: absolute; right: 0; bottom: 0; min-width: 20px; padding: 1px 5px; border-radius: 7px 0 0 0;
+  background: var(--slot); color: #2a1e00; font: 500 10px/1.5 var(--mono); text-align: center; }
+.block.wait { outline: 2px dashed var(--slot); outline-offset: -2px; }
+.block.off { filter: grayscale(1) brightness(.6); }
+.block.off .n { background: #7a7da8; }
+.block.off::after { content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(20,23,58,.55) 6px 8px); }
+.card-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; color: var(--mute); font-size: 13px; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 30px; color: var(--mute); font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 14px; height: 14px; border-radius: 4px; background: var(--shell-hi); display: inline-block; }
+.legend i.w { outline: 2px dashed var(--slot); outline-offset: -2px; }
+.legend i.o { background: repeating-linear-gradient(135deg, #4a4d78 0 4px, #2c2f58 4px 6px); }
+.legend i.e { background: var(--well); box-shadow: inset 0 1px 3px rgba(0,0,0,.6); }
+
+/* ---------- interruptor ---------- */
+.sw { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-size: 13px; color: var(--mute); user-select: none; }
+.sw input { position: absolute; opacity: 0; width: 0; height: 0; }
+.sw span { width: 36px; height: 20px; border-radius: 20px; background: #3a3f7d; position: relative; flex: none; transition: background .15s; }
+.sw span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--text); transition: transform .15s; }
+.sw input:checked + span { background: var(--ok); }
+.sw input:checked + span::after { transform: translateX(16px); background: #0d2b1c; }
+.sw input:focus-visible + span { outline: 2px solid var(--slot); outline-offset: 2px; }
+
+/* ---------- gaveta do save ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(8,9,28,.6); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 5; }
+.scrim.open { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100%); background: var(--shell); z-index: 6;
+  border-left: 1px solid var(--line); transform: translateX(102%); transition: transform .25s; overflow-y: auto; }
+.drawer.open { transform: none; }
+.art { min-height: 210px; padding: 20px; display: flex; flex-direction: column; justify-content: flex-end; position: relative;
+  background: linear-gradient(to top, var(--shell) 4%, rgba(29,33,82,.35) 70%), var(--pic, none) center/cover, var(--shell-hi); }
+.art .x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 0;
+  background: rgba(15,17,48,.75); font-size: 18px; line-height: 1; }
+.art h3 { margin: 0; font: 700 26px/1.1 var(--display); }
+.art p { margin: 6px 0 0; color: var(--text); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.chips span { padding: 3px 8px; border-radius: 6px; background: rgba(15,17,48,.7); color: var(--mute); font: 400 11px var(--mono); }
+.dbody { padding: 6px 20px 30px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.dbody h4, .panel h3 { margin: 26px 0 4px; font: 600 12px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
+.ver { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.ver strong { font-weight: 600; }
+.ver small { color: var(--mute); grid-column: 1; }
+.ver .acts { grid-row: 1 / span 2; grid-column: 2; align-self: center; display: flex; gap: 6px; }
+.ver .acts > * { padding: 8px 11px; border-radius: 8px; border: 1px solid var(--line); background: none;
+  color: var(--text); text-decoration: none; font: 600 12px var(--display); letter-spacing: .05em; text-transform: uppercase; }
+.ver .acts > *:hover { border-color: var(--slot); color: var(--slot); }
+.ver .acts > [aria-pressed=true] { background: var(--slot); border-color: var(--slot); color: #2a1e00; }
+.note { margin-top: 22px; padding: 14px 16px; border-radius: 12px; background: var(--well); color: var(--mute); font-size: 13.5px; }
+.note a { color: var(--slot); }
+.note ol { margin: 8px 0 0; padding-left: 20px; }
+
+/* ---------- ajustes ---------- */
+.panel { background: var(--shell); border: 1px solid var(--line); border-radius: 16px; padding: 6px 22px 22px; margin-bottom: 20px; }
+.panel h3 { margin-top: 22px; color: var(--slot); }
+.panel > p { margin: 8px 0 12px; color: var(--mute); max-width: 62ch; }
+.f { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 6px 20px; align-items: center; padding: 13px 0; border-top: 1px solid var(--line); }
+.f label b { font-weight: 500; display: block; }
+.f label small { color: var(--mute); }
+.f input[type=text], .f input[type=number], .f input[type=password], .f select {
+  width: 100%; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--line); background: var(--well); }
+.f .sw { justify-self: end; }
+.f.wide { grid-template-columns: 1fr; }
+.btn { white-space: nowrap; padding: 9px 14px; border-radius: 9px; border: 1px solid var(--line); background: none;
+  font: 600 12px var(--display); letter-spacing: .05em; text-transform: uppercase; }
+.btn:hover { border-color: var(--slot); color: var(--slot); }
+.savebar { position: sticky; bottom: 16px; display: flex; justify-content: flex-start; gap: 12px; align-items: center; margin-top: 8px; }
+.inline { display: flex; gap: 8px; }
+
+/* ---------- registro ---------- */
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed li { display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.feed img, .feed .ph { width: 44px; height: 44px; border-radius: 9px; object-fit: cover; background: var(--well); }
+.feed small { color: var(--mute); display: block; }
+.feed time { color: var(--mute); font-size: 13px; white-space: nowrap; }
+pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(--well); color: var(--mute);
+  font: 400 11.5px/1.7 var(--mono); max-height: 420px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+.empty { padding: 60px 20px; text-align: center; color: var(--mute); border: 1px dashed var(--line); border-radius: 16px; }
+.toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 80px); padding: 12px 18px; border-radius: 10px;
+  background: var(--text); color: var(--console); font-weight: 500; transition: transform .25s; z-index: 9; max-width: 90vw; }
+.toast.show { transform: translate(-50%, 0); }
+.toast.err { background: var(--bad); color: #2b0606; }
+[hidden] { display: none !important; }
+@media (max-width: 640px) {
+  .tabs { margin-left: 0; order: 3; width: 100%; }
+  .go { margin-left: auto; }
+  .f { grid-template-columns: 1fr; }
+  .f .sw { justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><i></i>Cartão de Memória</div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="cards" aria-selected="true">Cartões</button>
+      <button role="tab" data-tab="settings" aria-selected="false">Ajustes</button>
+      <button role="tab" data-tab="log" aria-selected="false">Registro</button>
+    </nav>
+    <button class="go" id="go">Copiar agora</button>
+  </header>
+
+  <section class="state">
+    <h1 id="headline">Lendo o cartão…</h1>
+    <p><span class="led" id="led"></span><span id="statusline"></span></p>
+  </section>
+
+  <main>
+    <section id="tab-cards">
+      <div class="cards" id="cards"></div>
+      <div class="legend">
+        <span><i></i>Save guardado (o número é a quantidade de versões)</span>
+        <span><i class="w"></i>Aguardando a primeira cópia</span>
+        <span><i class="o"></i>Fora do backup</span>
+        <span><i class="e"></i>Espaço livre</span>
+      </div>
+    </section>
+    <section id="tab-settings" hidden></section>
+    <section id="tab-log" hidden></section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Detalhes do save"></aside>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let data = null, lastJSON = "", tab = "cards", openKey = null, formDirty = false;
+
+const mb = b => (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace(".", ",") + " MB";
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+function stampDate(s) { // "20261004-135344" no fuso do servidor
+  return new Date(+s.slice(0, 4), s.slice(4, 6) - 1, +s.slice(6, 8), +s.slice(9, 11), +s.slice(11, 13), +s.slice(13, 15));
+}
+function ago(d) {
+  const s = Math.max(0, (Date.now() - d) / 1000);
+  if (s < 90) return "agora há pouco";
+  if (s < 3600) return `há ${Math.round(s / 60)} min`;
+  if (s < 86400) return `há ${Math.round(s / 3600)} h`;
+  return `há ${plural(Math.round(s / 86400), "dia", "dias")}`;
+}
+const full = d => d.toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+function toast(msg, err) {
+  const t = $("#toast");
+  t.textContent = msg; t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.className = "toast", err ? 6000 : 2600);
+}
+async function post(path, body = {}) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Falhou");
+  return j;
+}
+async function act(fn, okMsg) {
+  try { const r = await fn(); if (okMsg) toast(okMsg); await refresh(true); return r; }
+  catch (e) { toast(e.message, true); }
+}
+async function refresh(force) {
+  try {
+    const text = await (await fetch("/api/overview")).text();
+    if (text === lastJSON && !force) return;
+    lastJSON = text; data = JSON.parse(text); render();
+  } catch (e) { $("#statusline").textContent = "Sem resposta do serviço de backup."; }
+}
+
+const gameName = tid => data.titles[tid]?.name || tid;
+const saveKey = s => `${s.uid}/${s.title}/${s.file}`;
+const allSaves = () => data.profiles.flatMap(p => p.saves.map(s => ({ ...s, profile: p })));
+const saveOff = s => !s.profile.included || data.titles[s.title]?.excluded;
+
+function render() {
+  const st = data.status, t = data.totals;
+  $("#headline").innerHTML = t.versions
+    ? `<b>${plural(t.saves, "save", "saves")}</b> ${t.saves === 1 ? "guardado" : "guardados"} em ${plural(t.versions, "versão", "versões")}, ${mb(t.bytes)} no servidor.`
+    : "Nenhum save guardado ainda.";
+  if (t.over_limit) $("#headline").innerHTML += ` <span style="color:var(--bad)">Acima do limite de espaço.</span>`;
+  $("#led").className = "led" + (st.online ? " on" : "");
+  const last = st.last_run ? `Última verificação ${ago(new Date(st.last_run.replace(" ", "T")))}${st.last_trigger ? `, motivo: ${st.last_trigger}` : ""}.` : "";
+  $("#statusline").textContent = st.running ? "Copiando os saves do PS5…"
+    : st.online ? `PS5 ligado em ${st.host}. ${last}`
+    : `PS5 desligado, em repouso ou sem o desbloqueio. A cópia volta sozinha quando ele reaparecer. ${last}`;
+  const go = $("#go");
+  go.disabled = !!st.running || !st.online; go.classList.toggle("busy", !!st.running);
+  go.textContent = st.running ? "Copiando" : "Copiar agora";
+  renderCards();
+  if (openKey) renderDrawer();
+  if (tab === "log") renderLog();
+  if (tab === "settings" && !formDirty) renderSettings();
+}
+
+function renderCards() {
+  if (!data.profiles.length) {
+    $("#cards").innerHTML = `<div class="empty">Ainda não li nenhum perfil. Ligue o PS5, rode o desbloqueio com o ftpsrv e toque em “Copiar agora”.</div>`;
+    return;
+  }
+  $("#cards").innerHTML = data.profiles.map(p => {
+    const slots = Math.max(15, Math.ceil(p.saves.length / 5) * 5);
+    const versions = p.saves.reduce((n, s) => n + s.versions.length, 0);
+    const blocks = p.saves.map(s => {
+      const t = data.titles[s.title] || {}, off = !p.included || t.excluded;
+      const cls = off ? "off" : s.versions.length ? "" : "wait";
+      const what = `${gameName(s.title)}: ${s.label || s.name}`;
+      return `<button class="block ${cls}" data-key="${esc(saveKey(s))}" title="${esc(what)}" aria-label="${esc(what)}"
+        ${t.icon ? `style="--art:url(/art/${s.title}/icon0.png)"` : ""}>
+        ${t.icon ? "" : `<span class="ini">${esc(s.title.slice(0, 4))}</span>`}
+        ${s.versions.length ? `<span class="n">${s.versions.length}</span>` : ""}</button>`;
+    }).join("") + `<span class="block"></span>`.repeat(slots - p.saves.length);
+    const foot = p.saves.length
+      ? `${plural(p.saves.length, "save", "saves")} · ${plural(versions, "versão guardada", "versões guardadas")}`
+      : "Nenhum save neste perfil";
+    return `<article class="card ${p.included ? "" : "out"}">
+      <div class="card-label">
+        <div><h2>${esc(p.name)}${p.is_new ? `<span class="tag">novo</span>` : ""}</h2><small class="mono">${esc(p.uid)}</small></div>
+        <label class="sw"><input type="checkbox" data-profile="${esc(p.uid)}" ${p.included ? "checked" : ""}><span></span></label>
+      </div>
+      <div class="blocks">${blocks}</div>
+      <div class="card-foot"><span>${foot}</span><span>${p.included ? "No backup" : "Fora do backup"}</span></div>
+    </article>`;
+  }).join("");
+}
+
+function renderDrawer() {
+  const s = allSaves().find(x => saveKey(x) === openKey);
+  if (!s) return closeDrawer();
+  const t = data.titles[s.title] || {}, off = saveOff(s);
+  const state = !s.versions.length ? (off ? "Fora do backup. Nenhuma versão guardada." : "Aguardando a primeira cópia.")
+    : !s.on_console ? "Não está mais no console. As versões guardadas continuam aqui."
+    : off ? "Fora do backup. As versões antigas continuam guardadas, mas não entram novas."
+    : `Última cópia ${ago(stampDate(s.versions[0].stamp))}.`;
+  const versions = s.versions.map((v, i) => `<div class="ver">
+      <strong>${full(stampDate(v.stamp))}${i === 0 ? ` <span class="tag">mais recente</span>` : ""}</strong>
+      <small>${esc(v.trigger)} · ${mb(v.size)}${v.sub ? " · " + esc(v.sub) : ""} · <span class="mono" title="SHA-256: ${esc(v.sha256)}">${esc(v.sha256.slice(0, 12))}</span></small>
+      <span class="acts"><button data-pin="${v.stamp}" aria-pressed="${v.pinned}" title="Uma versão fixada nunca é apagada pela limpeza.">${v.pinned ? "Fixada" : "Fixar"}</button>
+      <a href="/download/${s.uid}/${s.title}/${encodeURIComponent(s.file)}/${v.stamp}" download>Baixar</a></span>
+    </div>`).join("");
+  $("#drawer").innerHTML = `
+    <div class="art" ${t.pic ? `style="--pic:url(/art/${s.title}/pic0.png)"` : ""}>
+      <button class="x" id="closeDrawer" aria-label="Fechar">×</button>
+      <h3>${esc(gameName(s.title))}</h3>
+      <p>${esc(s.label || s.name)}${s.sub ? " · " + esc(s.sub) : ""}${s.is_system_copy ? " (cópia de segurança do próprio jogo)" : ""}</p>
+      <div class="chips"><span>${esc(s.profile.name)}</span><span>${esc(s.title)}</span>${t.version ? `<span>v${esc(t.version)}</span>` : ""}<span>${esc(s.file)}</span></div>
+    </div>
+    <div class="dbody">
+      <div class="row"><span>${esc(state)}</span></div>
+      <div class="row"><span>Guardar os saves deste jogo<br><small style="color:var(--mute)">Vale para todos os perfis.</small></span>
+        <label class="sw"><input type="checkbox" data-title="${esc(s.title)}" ${t.excluded ? "" : "checked"}><span></span></label></div>
+      <h4>${s.versions.length ? plural(s.versions.length, "versão guardada", "versões guardadas") : "Sem versões"}</h4>
+      ${versions}
+      <div class="note"><b>Para restaurar</b>
+        <ol><li>Baixe a versão que você quer.</li>
+        <li>Abra o <a href="${esc(data.status.garlic_url)}" target="_blank" rel="noopener">Garlic SaveMgr</a> e use a aba Import no perfil ${esc(s.profile.name)}.</li></ol>
+        Esta página nunca grava nada no PS5.</div>
+    </div>`;
+}
+function openDrawer(key) { openKey = key; renderDrawer(); $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
+function closeDrawer() { openKey = null; $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
+
+/* ---------- ajustes ---------- */
+const field = (path, label, help, control) => `<div class="f"><label for="${path}"><b>${label}</b>${help ? `<small>${help}</small>` : ""}</label>${control}</div>`;
+const get = path => path.split(".").reduce((o, k) => o[k], data.config);
+const num = (path, label, help, min = 0) => field(path, label, help, `<input type="number" id="${path}" data-path="${path}" data-kind="int" min="${min}" value="${get(path)}">`);
+const txt = (path, label, help, kind = "str") => field(path, label, help, `<input type="text" id="${path}" data-path="${path}" data-kind="${kind}" value="${esc(kind === "str" ? get(path) : get(path).join(", "))}">`);
+const tog = (path, label, help) => field(path, label, help, `<label class="sw"><input type="checkbox" id="${path}" data-path="${path}" data-kind="bool" ${get(path) ? "checked" : ""}><span></span></label>`);
+
+function renderSettings() {
+  const c = data.config, w = data.webhook;
+  const titles = Object.entries(data.titles).sort((a, b) => (a[1].name || a[0]).localeCompare(b[1].name || b[0]));
+  $("#tab-settings").innerHTML = `
+  <div class="panel"><h3>Quando copiar</h3>
+    <p>Com o PS5 desligado não há como ler os saves. Por isso o caminho seguro é copiar cada save logo depois que ele muda, enquanto o console ainda está ligado.</p>
+    ${tog("triggers.on_save_change", "Copiar assim que um save mudar", "Cobre desligar e repouso: quando o console cai, a cópia já foi feita.")}
+    ${num("triggers.watch_interval_seconds", "Olhar os saves a cada (segundos)", "O atraso máximo é cerca de duas vezes este valor.", 10)}
+    ${tog("triggers.on_power_on", "Copiar quando o PS5 ligar", "Roda assim que o desbloqueio e o ftpsrv respondem.")}
+    ${num("triggers.power_on_delay_seconds", "Esperar antes dessa cópia (segundos)", "")}
+    ${num("triggers.schedule_interval_hours", "Conferência completa a cada (horas)", "0 desliga. Só roda com o PS5 ligado.")}
+    ${txt("triggers.schedule_daily_at", "Horários fixos", "Separados por vírgula, como 04:00, 18:30. Vazio desliga.", "list")}
+  </div>
+  <div class="panel"><h3>Perfis e jogos</h3>
+    <p>Ligue ou desligue cada perfil direto no cartão dele, na aba Cartões.</p>
+    ${field("filter.new_profiles", "Quando aparecer um perfil novo no PS5", "Você é avisado e pode mudar depois no cartão do perfil.",
+      `<select id="filter.new_profiles" data-path="filter.new_profiles" data-kind="str">
+        <option value="include" ${c.filter.new_profiles === "include" ? "selected" : ""}>Entra no backup</option>
+        <option value="exclude" ${c.filter.new_profiles === "exclude" ? "selected" : ""}>Fica de fora</option></select>`)}
+    ${titles.map(([id, t]) => `<div class="f"><label><b>${esc(t.name || id)}</b><small class="mono">${esc(id)}</small></label>
+      <label class="sw"><input type="checkbox" data-title="${esc(id)}" ${t.excluded ? "" : "checked"}><span></span></label></div>`).join("")}
+  </div>
+  <div class="panel"><h3>Quanto guardar</h3>
+    <p>Hoje: ${mb(data.totals.bytes)} em versões guardadas${data.totals.trash_bytes ? ` e ${mb(data.totals.trash_bytes)} na lixeira` : ""}.
+      As versões antigas são rareadas, nunca zeradas: fica a última de cada hora, depois de cada dia, de cada semana e, para sempre, de cada mês. As mais recentes de cada save e as que você fixar nunca saem.</p>
+    ${tog("retention.thin_old_versions", "Rarear versões antigas", "Desligado, tudo é guardado para sempre.")}
+    ${num("retention.keep_all_hours", "Guardar todas as versões das últimas (horas)", "")}
+    ${num("retention.keep_hourly_days", "Depois, uma por hora durante (dias)", "")}
+    ${num("retention.keep_daily_days", "Depois, uma por dia até completar (dias)", "")}
+    ${num("retention.keep_weekly_weeks", "Depois, uma por semana até completar (semanas)", "Daí em diante fica uma por mês, sem prazo.")}
+    ${num("retention.keep_min_versions", "Nunca deixar um save com menos de (versões)", "", 1)}
+    ${num("retention.trash_days", "Manter na lixeira antes de apagar de vez (dias)", "O que sai vai para a pasta trash e ainda pode ser recuperado nesse prazo.")}
+    ${num("retention.warn_total_gb", "Avisar se passar de (GB)", "Só avisa. Passar do limite nunca apaga nada. 0 desliga o aviso.")}
+  </div>
+  <div class="panel"><h3>Avisos no Discord</h3>
+    <p>Cada sessão de jogo vira uma única mensagem, atualizada a cada cópia e fechada quando o PS5 desliga. Nada de uma mensagem por save.</p>
+    <div class="f wide"><label for="hook"><b>Webhook</b><small>${w.set ? "Já configurado. Cole outro para trocar, ou salve vazio para desligar." : "Cole a URL do webhook do canal."}</small></label>
+      <div class="inline"><input type="password" id="hook" placeholder="${w.set ? "••••••••  configurado" : "https://discord.com/api/webhooks/…"}" autocomplete="off">
+      <button class="btn" id="hookSave">Salvar</button><button class="btn" id="hookTest">Enviar teste</button></div></div>
+    ${tog("notify.on_backup", "Avisar quando copiar saves", "")}
+    ${num("notify.session_gap_hours", "Abrir mensagem nova depois de (horas) sem cópias", "", 1)}
+    ${tog("notify.on_error", "Avisar quando uma cópia falhar", "")}
+    ${num("notify.error_cooldown_minutes", "No máximo um aviso de falha a cada (minutos)", "")}
+    ${tog("notify.on_new_profile", "Avisar quando surgir um perfil novo", "")}
+  </div>
+  <div class="panel"><h3>Console</h3>
+    ${txt("ps5.host", "Endereço do PS5", "")}
+    ${num("ps5.ftp_port", "Porta do ftpsrv", "É por aqui que os saves são lidos.", 1)}
+    ${num("ps5.garlic_port", "Porta do Garlic SaveMgr", "Usada só no atalho de restauração.", 1)}
+    ${num("triggers.probe_interval_seconds", "Checar se o PS5 está ligado a cada (segundos)", "", 5)}
+    ${num("triggers.offline_after_failures", "Considerar desligado depois de (falhas seguidas)", "", 1)}
+  </div>
+  <div class="savebar"><button class="go" id="saveCfg">Salvar ajustes</button></div>`;
+  formDirty = false;
+}
+function collectConfig() {
+  const cfg = JSON.parse(JSON.stringify(data.config));
+  document.querySelectorAll("#tab-settings [data-path]").forEach(el => {
+    const [sec, key] = el.dataset.path.split("."), kind = el.dataset.kind;
+    cfg[sec][key] = kind === "bool" ? el.checked : kind === "int" ? parseInt(el.value || "0", 10)
+      : kind === "list" ? el.value.split(",").map(x => x.trim()).filter(Boolean) : el.value.trim();
+  });
+  return cfg;
+}
+
+/* ---------- registro ---------- */
+async function renderLog() {
+  const events = allSaves().flatMap(s => s.versions.map(v => ({ s, v }))).sort((a, b) => b.v.stamp.localeCompare(a.v.stamp)).slice(0, 60);
+  const feed = events.length ? `<ul class="feed">${events.map(({ s, v }) => `<li>
+      ${data.titles[s.title]?.icon ? `<img src="/art/${s.title}/icon0.png" alt="">` : `<span class="ph"></span>`}
+      <div><b>${esc(gameName(s.title))}</b> · ${esc(v.label || s.label || s.name)}<small>${esc(s.profile.name)} · ${esc(v.trigger)} · ${mb(v.size)}</small></div>
+      <time title="${full(stampDate(v.stamp))}">${ago(stampDate(v.stamp))}</time></li>`).join("")}</ul>`
+    : `<div class="empty">Nenhuma cópia registrada ainda.</div>`;
+  let lines = [];
+  try { lines = (await (await fetch("/api/log")).json()).lines; } catch (e) {}
+  const keep = $("#tab-log details")?.open;
+  $("#tab-log").innerHTML = `<div class="panel"><h3>Cópias recentes</h3>${feed}</div>
+    <div class="panel"><h3>Integridade</h3><p>Refaz o checksum de todas as versões guardadas e compara com o que foi anotado na hora da cópia.</p>
+      <button class="btn" id="verify">Conferir agora</button> <span id="verifyOut" style="margin-left:10px;color:var(--mute)"></span>
+      <details ${keep ? "open" : ""} style="margin-top:18px"><summary style="cursor:pointer;color:var(--mute)">Registro técnico do serviço</summary>
+      <pre class="log">${esc(lines.join("\n")) || "Vazio."}</pre></details></div>`;
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener("click", async e => {
+  const el = e.target.closest("button, a");
+  if (!el) return;
+  if (el.dataset.tab) {
+    tab = el.dataset.tab;
+    document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", b === el));
+    ["cards", "settings", "log"].forEach(t => $("#tab-" + t).hidden = t !== tab);
+    if (tab === "settings") renderSettings();
+    if (tab === "log") renderLog();
+  } else if (el.dataset.key) openDrawer(el.dataset.key);
+  else if (el.id === "closeDrawer") closeDrawer();
+  else if (el.dataset.pin) {
+    const [uid, title, ...rest] = openKey.split("/"), pinned = el.getAttribute("aria-pressed") !== "true";
+    act(() => post("/api/pin", { uid, title, file: rest.join("/"), stamp: el.dataset.pin, pinned }), pinned ? "Versão fixada" : "Versão liberada");
+  }
+  else if (el.id === "go") { await act(() => post("/api/backup"), "Cópia iniciada"); }
+  else if (el.id === "saveCfg") { const ok = await act(() => post("/api/config", collectConfig()), "Ajustes salvos"); if (ok) renderSettings(); }
+  else if (el.id === "hookSave") { const ok = await act(() => post("/api/webhook", { url: $("#hook").value }), "Webhook salvo"); if (ok) renderSettings(); }
+  else if (el.id === "hookTest") act(() => post("/api/webhook/test"), "Teste enviado");
+  else if (el.id === "verify") {
+    $("#verifyOut").textContent = "Conferindo…";
+    try { const r = await post("/api/verify");
+      $("#verifyOut").textContent = r.bad.length ? `${r.bad.length} com problema: ${r.bad.join(", ")}` : `${plural(r.ok, "versão íntegra", "versões íntegras")}, nenhuma com problema.`; }
+    catch (err) { $("#verifyOut").textContent = err.message; }
+  }
+});
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.dataset.profile) {
+    act(() => post("/api/profile", { uid: el.dataset.profile, mode: el.checked ? "include" : "exclude" }),
+      el.checked ? "Perfil no backup" : "Perfil fora do backup");
+  } else if (el.dataset.title) {
+    act(() => post("/api/title", { id: el.dataset.title, excluded: !el.checked }), el.checked ? "Jogo no backup" : "Jogo fora do backup");
+  } else if (el.dataset.path) formDirty = true;
+});
+document.addEventListener("input", e => { if (e.target.dataset.path) formDirty = true; });
+$("#scrim").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+
+refresh();
+setInterval(refresh, 4000);
+</script>
+</body>
+</html>
