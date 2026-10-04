@@ -55,7 +55,7 @@ DEFAULTS = {
     "retention": {"thin_old_versions": True, "keep_all_hours": 1, "keep_hourly_days": 2,
                   "keep_daily_days": 14, "keep_weekly_weeks": 12, "keep_min_versions": 3,
                   "min_gap_minutes": 10, "trash_days": 7, "warn_total_gb": 20, "warn_free_gb": 10},
-    "notify": {"on_backup": True, "on_error": True, "on_new_profile": True,
+    "notify": {"on_power": True, "on_backup": True, "on_error": True, "on_new_profile": True,
                "error_cooldown_minutes": 60, "session_gap_hours": 6},
 }
 MINIMUMS = {"watch_interval_seconds": 10, "probe_interval_seconds": 5, "offline_after_failures": 1, "keep_min_versions": 1,
@@ -267,6 +267,21 @@ def make_embed(title, description, color, fields=()):
             "timestamp": dt.datetime.now(dt.timezone.utc).isoformat()}
 
 
+def discord_delete(message_id):
+    url = webhook_url()
+    if not (message_id and url and is_discord(url)):
+        return
+    try:
+        _http("DELETE", f"{url.split('?')[0]}/messages/{message_id}", None, "application/json")
+    except Exception as e:
+        log.warning("não consegui apagar a mensagem antiga da sessão: %s", e)
+
+
+def human_duration(seconds):
+    minutes = max(1, round(seconds / 60))
+    return f"{minutes // 60} h {minutes % 60:02d} min" if minutes >= 60 else f"{minutes} min"
+
+
 def session_embed(sess, closed):
     groups = {}
     for e in sess["entries"].values():
@@ -276,37 +291,65 @@ def session_embed(sess, closed):
     more = f"\n… e mais {len(lines) - 12} jogos" if len(lines) > 12 else ""
     versions = sum(e["count"] for e in sess["entries"].values())
     size = sum(e["bytes"] for e in sess["entries"].values())
-    title = "✅  Sessão encerrada, saves guardados" if closed else "💾  Guardando os saves desta sessão"
-    return make_embed(title, "\n\n".join(lines[:12]) + more, 0x5BE3A0 if closed else 0xFFC53D, [
-        ("Versões novas", versions), ("Saves", len(sess["entries"])), ("Tamanho", f"{size / 1048576:.1f} MB"),
+    body = "\n\n".join(lines[:12]) + more
+    if closed:
+        fields = [("Duração", human_duration(sess["updated"] - sess["started"])), ("Cópias feitas", versions),
+                  ("Saves", len(sess["entries"])), ("Lido do PS5", f"{size / 1048576:.1f} MB"),
+                  ("Total guardado", f"{(dir_bytes(SAVES_DIR) + dir_bytes(TRASH_DIR)) / 1024 ** 3:.2f} GB")]
+        return make_embed("🔴  PS5 desligado · sessão encerrada",
+                          body or "Nenhum save mudou nesta sessão.", 0x5BE3A0 if versions else 0x95A5A6, fields)
+    if not versions:
+        return make_embed("🟢  PS5 ligado", "Vigiando os saves. Esta mensagem é atualizada a cada cópia.",
+                          0x7C8CFF, [("Desde", f"<t:{sess['started']}:t>")])
+    return make_embed("💾  Guardando os saves desta sessão", body, 0xFFC53D, [
+        ("Cópias feitas", versions), ("Saves", len(sess["entries"])), ("Lido do PS5", f"{size / 1048576:.1f} MB"),
         ("Início", f"<t:{sess['started']}:t>"), ("Última cópia", f"<t:{sess['updated']}:R>"),
         ("Gatilho", sess.get("trigger", "-"))])
 
 
-def session_record(cfg, state, copied, trigger):
-    """Uma única mensagem por sessão de jogo, editada a cada cópia (sem enxurrada)."""
-    if not cfg["notify"]["on_backup"] or not webhook_url():
-        return
+def session_start(cfg, state):
+    """PS5 apareceu na rede: abre a sessão e manda a mensagem que será atualizada.
+    Editar uma mensagem não gera notificação no Discord; por isso o começo e o fim
+    da sessão são mensagens novas, e só as atualizações do meio são edições."""
     now, sess = int(time.time()), state["session"]
-    if sess and now - sess["updated"] > cfg["notify"]["session_gap_hours"] * 3600:
-        session_close(state)
-        sess = None
-    if not sess:
-        sess = state["session"] = {"message_id": None, "started": now, "entries": {}}
+    if sess and now - sess["updated"] <= cfg["notify"]["session_gap_hours"] * 3600:
+        return  # o serviço reiniciou no meio de uma sessão: continua na mesma mensagem
+    if sess:
+        session_close(cfg, state)
+    sess = state["session"] = {"message_id": None, "started": now, "updated": now, "entries": {}}
+    if cfg["notify"]["on_power"]:
+        sess["message_id"] = send_embed(session_embed(sess, False))
+
+
+def session_record(cfg, state, copied, trigger):
+    """Atualiza a mensagem da sessão a cada cópia (edição, sem notificação)."""
+    now = int(time.time())
+    if state["session"] and now - state["session"]["updated"] > cfg["notify"]["session_gap_hours"] * 3600:
+        session_close(cfg, state)
+    if not state["session"]:
+        state["session"] = {"message_id": None, "started": now, "updated": now, "entries": {}}
+    sess = state["session"]
     for c in copied:
         e = sess["entries"].setdefault(c["key"], {"game": c["game"], "profile": c["profile"],
                                                   "save": c["save"], "count": 0, "bytes": 0})
         e["count"] += 1
         e["bytes"] += c["bytes"]
     sess["updated"], sess["trigger"] = now, TRIGGER_LABEL.get(trigger, trigger)
-    sess["message_id"] = send_embed(session_embed(sess, False), sess["message_id"])
+    if cfg["notify"]["on_backup"]:
+        sess["message_id"] = send_embed(session_embed(sess, False), sess["message_id"])
 
 
-def session_close(state):
+def session_close(cfg, state):
+    """PS5 saiu da rede: troca a mensagem da sessão por um resumo novo (que notifica)."""
     sess = state["session"]
-    if sess and sess.get("message_id"):
-        send_embed(session_embed(sess, True), sess["message_id"])
     state["session"] = None
+    if not sess:
+        return
+    copied = bool(sess["entries"])
+    if (cfg["notify"]["on_power"] or (copied and cfg["notify"]["on_backup"])) and webhook_url():
+        sess["updated"] = int(time.time())  # a duração conta até o console sair da rede
+        discord_delete(sess.get("message_id"))
+        send_embed(session_embed(sess, True))
 
 
 def notify_error(cfg, title, description):
@@ -769,6 +812,10 @@ def daemon(cfg):
             if not online:
                 online = STATUS["online"] = True
                 log.info("PS5 ONLINE (ftpsrv respondeu)")
+                with locked():
+                    state = load_state()
+                    session_start(cfg, state)
+                    save_json(STATE_FILE, state)
                 if trig["on_power_on"] or due:
                     time.sleep(trig["power_on_delay_seconds"])
                     safe_run(cfg, "power_on" if trig["on_power_on"] else "schedule")
@@ -793,7 +840,7 @@ def daemon(cfg):
                     # gravado depois da última varredura só entra no próximo boot.
                     log.info("PS5 OFFLINE (desligado/repouso/fora da rede). Última rodada sem falhas: %s",
                              state["meta"].get("last_ok", "nunca"))
-                    session_close(state)  # fecha a mensagem da sessão no Discord, sem criar outra
+                    session_close(cfg, state)  # manda o resumo da sessão no Discord
                     save_json(STATE_FILE, state)
             if due and not warned_missed:
                 warned_missed = True

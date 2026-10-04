@@ -483,11 +483,12 @@ function renderSettings() {
     ${num("retention.warn_free_gb", "Avisar se o disco tiver menos de (GB) livres", "0 desliga o aviso.")}
   </div>
   <div class="panel"><h3>Avisos no Discord</h3>
-    <p>Cada sessão de jogo vira uma única mensagem, atualizada a cada cópia e fechada quando o PS5 desliga. Nada de uma mensagem por save.</p>
+    <p>Quando o PS5 liga chega uma mensagem, que é atualizada em silêncio a cada cópia. Quando ele desliga, ela é trocada por um resumo da sessão. São dois avisos por sessão, e nada de uma mensagem por save.</p>
     <div class="f wide"><label for="hook"><b>Webhook</b><small>${w.set ? "Já configurado. Cole outro para trocar, ou salve vazio para desligar." : "Cole a URL do webhook do canal."}</small></label>
       <div class="inline"><input type="password" id="hook" placeholder="${w.set ? "••••••••  configurado" : "https://discord.com/api/webhooks/…"}" autocomplete="off">
       <button class="btn" id="hookSave">Salvar</button><button class="btn" id="hookTest">Enviar teste</button></div></div>
-    ${tog("notify.on_backup", "Avisar quando copiar saves", "")}
+    ${tog("notify.on_power", "Avisar quando o PS5 ligar e desligar", "O aviso de desligar traz o resumo da sessão.")}
+    ${tog("notify.on_backup", "Atualizar a mensagem a cada cópia", "É uma edição da mesma mensagem; o Discord não notifica edições.")}
     ${num("notify.session_gap_hours", "Abrir mensagem nova depois de (horas) sem cópias", "", 1)}
     ${tog("notify.on_error", "Avisar quando uma cópia falhar", "")}
     ${num("notify.error_cooldown_minutes", "No máximo um aviso de falha a cada (minutos)", "")}

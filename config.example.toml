@@ -55,9 +55,10 @@ warn_free_gb = 10      # avisa se o disco dos backups tiver menos que isso livre
 
 [notify]
 # O webhook é configurado na interface (fica em secrets.json na pasta de backup)
-# ou em NOTIFY_URL no .env. No Discord, cada sessão de jogo é uma única mensagem
-# editada a cada cópia; depois de session_gap_hours sem cópias abre-se outra.
-on_backup = true
+# ou em NOTIFY_URL no .env. No Discord: uma mensagem quando o PS5 liga, editada a
+# cada cópia, e trocada por um resumo quando ele desliga. Edições não notificam.
+on_power = true      # mensagem nova ao ligar e resumo ao desligar
+on_backup = true     # atualiza (edita) a mensagem da sessão a cada cópia
 on_error = true
 on_new_profile = true
 error_cooldown_minutes = 60

@@ -151,9 +151,10 @@ mostra quanto cada jogo ocupa e quanto resta no disco.
 ## Avisos no Discord
 
 Em **Ajustes › Avisos no Discord**, cole a URL de um webhook do seu canal e
-toque em **Enviar teste**. Cada sessão de jogo vira uma única mensagem, que é
-editada a cada cópia e fechada quando o PS5 desliga. Falhas repetidas geram no
-máximo um aviso por hora.
+toque em **Enviar teste**. Quando o PS5 liga chega uma mensagem, que é editada
+em silêncio a cada cópia (o Discord não notifica edições). Quando ele desliga,
+ela é trocada por um resumo da sessão: duração, jogos, cópias e espaço total.
+São dois avisos por sessão. Falhas repetidas geram no máximo um aviso por hora.
 
 O webhook fica em `data/secrets.json`, fora do repositório. Qualquer outra URL
 recebe um POST de texto simples (serve para ntfy, por exemplo).
