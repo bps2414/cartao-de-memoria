@@ -343,6 +343,7 @@ const I18N = {
     "s_notify.on_error": "Avisar quando uma cópia falhar",
     "s_notify.error_cooldown_minutes": "No máximo um aviso de falha a cada (minutos)",
     "s_notify.on_new_profile": "Avisar quando surgir um perfil novo",
+    "s_notify.weekly_summary": "Mandar um resumo da semana", "s_notify.weekly_summary_h": "Toda segunda de manhã: tempo de jogo por jogo e perfil, e o espaço ocupado. Semana sem jogo não gera mensagem.",
     set_console: "Console",
     "s_ps5.host": "Endereço do PS5",
     "s_ps5.ftp_port": "Porta do ftpsrv", "s_ps5.ftp_port_h": "É por aqui que os saves são lidos.",
@@ -457,6 +458,7 @@ const I18N = {
     "s_notify.on_error": "Notify when a backup fails",
     "s_notify.error_cooldown_minutes": "At most one failure notice every (minutes)",
     "s_notify.on_new_profile": "Notify when a new profile shows up",
+    "s_notify.weekly_summary": "Send a weekly summary", "s_notify.weekly_summary_h": "Every Monday morning: play time by game and profile, and storage used. A week with no play sends nothing.",
     set_console: "Console",
     "s_ps5.host": "PS5 address",
     "s_ps5.ftp_port": "ftpsrv port", "s_ps5.ftp_port_h": "This is where the saves are read from.",
@@ -758,6 +760,7 @@ function renderSettings() {
     ${tog("notify.on_error")}
     ${num("notify.error_cooldown_minutes")}
     ${tog("notify.on_new_profile")}
+    ${tog("notify.weekly_summary")}
   </div>
   <div class="panel"><h3>${t("set_console")}</h3>
     ${txt("ps5.host")}

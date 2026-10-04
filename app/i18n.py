@@ -35,6 +35,13 @@ TEXT = {
         "space_title": "📦  Atenção ao espaço dos backups",
         "space_body": "Os backups ocupam {used} GB e restam {free} GB livres no disco. "
                       "Nada foi apagado. Veja Ajustes › Quanto guardar.",
+        "weekly_title": "📅  Resumo da semana · {start} a {end}",
+        "weekly_note": "Tempo estimado pelos momentos em que cada jogo gravou saves.",
+        "f_played": "Tempo de jogo",
+        "f_busiest": "Dia mais jogado",
+        "week_delta": "{delta} MB na semana",
+        "date_short": "{dd}/{mm}",
+        "months": "jan fev mar abr mai jun jul ago set out nov dez",
         "verify_title": "⚠️  Conferência de integridade: {n} com problema",
         "verify_body": "Estas versões guardadas não batem mais com o checksum anotado na hora da cópia "
                        "(arquivo corrompido ou ausente). Nada foi apagado. Veja Registro › Integridade.",
@@ -94,6 +101,13 @@ TEXT = {
         "space_title": "📦  Backup storage needs attention",
         "space_body": "Backups take up {used} GB and the disk has {free} GB free. "
                       "Nothing was deleted. See Settings › How much to keep.",
+        "weekly_title": "📅  Weekly summary · {start} – {end}",
+        "weekly_note": "Play time is estimated from the moments each game wrote a save.",
+        "f_played": "Play time",
+        "f_busiest": "Busiest day",
+        "week_delta": "{delta} MB this week",
+        "date_short": "{mon} {day}",
+        "months": "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",
         "verify_title": "⚠️  Integrity check: {n} with problems",
         "verify_body": "These stored versions no longer match the checksum recorded when they were copied "
                        "(corrupted or missing file). Nothing was deleted. See Log › Integrity.",

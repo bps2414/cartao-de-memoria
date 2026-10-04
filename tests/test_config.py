@@ -106,6 +106,8 @@ class Dictionary(unittest.TestCase):
         for lang in LANGS:
             self.assertEqual(set(TEXT[lang]), set(base), lang)
             for key, text in TEXT[lang].items():
+                if key == "date_short":  # formato de data: cada idioma usa as partes que quiser
+                    continue
                 self.assertEqual(set(re.findall(r"\{(\w+)\}", text)), set(re.findall(r"\{(\w+)\}", base[key])), key)
 
 

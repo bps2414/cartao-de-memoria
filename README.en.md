@@ -180,6 +180,10 @@ backups and total storage. That is two notifications per session. Repeated
 failures produce at most one notice per hour. The message lists as "playing
 now" the games that wrote saves in the last 15 minutes; the window is adjustable.
 
+Every Monday morning you also get a **weekly summary**: play time by game and
+by profile, the busiest day and the storage used. A week with no play sends
+nothing, and it can be turned off in Settings.
+
 The webhook is stored in `data/secrets.json`, outside the repository. Any other
 URL receives a plain-text POST (useful for ntfy, for example).
 

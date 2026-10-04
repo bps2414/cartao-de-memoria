@@ -60,7 +60,7 @@ DEFAULTS = {
                   "min_gap_minutes": 10, "trash_days": 7, "warn_total_gb": 20, "warn_free_gb": 10},
     "notify": {"on_power": True, "on_backup": True, "on_error": True, "on_new_profile": True,
                "error_cooldown_minutes": 60, "session_gap_hours": 6, "now_playing_minutes": 15,
-               "language": "pt-BR"},
+               "weekly_summary": True, "language": "pt-BR"},
 }
 MINIMUMS = {"watch_interval_seconds": 10, "probe_interval_seconds": 5, "offline_after_failures": 1, "keep_min_versions": 1,
             "ftp_port": 1, "garlic_port": 1, "now_playing_minutes": 1}
@@ -388,6 +388,90 @@ def notify_error(cfg, title_key, description):
         state["meta"]["last_error_notified"] = int(time.time())
         save_json(STATE_FILE, state)
     send_embed(make_embed("⚠️  " + tr(cfg["notify"]["language"], title_key), description, 0xFF6B6B))
+
+
+WEEKLY_HOUR = 9  # o resumo da semana sai na segunda-feira a partir desta hora
+
+
+def weekly_due(meta, now):
+    """Devolve a segunda-feira que abre a semana a resumir, ou None se não é hora.
+    A semana fecha no domingo e o resumo sai uma vez, na segunda de manhã (ou assim
+    que o serviço voltar). Na primeira vez só marca a semana atual, sem enviar: quem
+    acabou de instalar não recebe um resumo de uma semana que o serviço não viu."""
+    ref = now - dt.timedelta(hours=WEEKLY_HOUR)
+    monday = ref.date() - dt.timedelta(days=ref.weekday())
+    last, meta["last_weekly"] = meta.get("last_weekly"), monday.isoformat()
+    if last is None or last >= monday.isoformat():
+        meta["last_weekly"] = last or monday.isoformat()
+        return None
+    return monday - dt.timedelta(days=7)
+
+
+def weekly_embed(cfg, state, stats, start):
+    """Resumo de sete dias a partir de `start`: tempo de jogo por jogo e por perfil
+    (estimado pelos intervalos de 10 minutos com saves gravados) e espaço ocupado.
+    Devolve None se ninguém jogou na semana."""
+    lang = cfg["notify"]["language"]
+    days = [(start + dt.timedelta(days=i)).isoformat() for i in range(7)]
+    per_game, per_profile, per_day = {}, {}, {}
+    for day in days:
+        by_profile = {}
+        for key, slots in stats["slots"].get(day, {}).items():
+            uid, _, title = key.partition("|")
+            per_game[(uid, title)] = per_game.get((uid, title), 0) + len(slots)
+            by_profile.setdefault(uid, set()).update(slots)  # dois jogos no mesmo intervalo contam uma vez
+        for uid, slots in by_profile.items():
+            per_profile[uid] = per_profile.get(uid, 0) + len(slots)
+        per_day[day] = len(set().union(*by_profile.values())) if by_profile else 0
+    total = sum(per_day.values())
+    if not total:
+        return None
+
+    def profile(uid):
+        return state["profiles"].get(uid) or uid
+
+    def clock(slots):
+        return human_duration(slots * 600)
+
+    def short(day):
+        d = dt.date.fromisoformat(day)
+        return tr(lang, "date_short", day=d.day, dd=f"{d.day:02d}", mm=f"{d.month:02d}",
+                  mon=tr(lang, "months").split()[d.month - 1])
+
+    ranked = sorted(per_game.items(), key=lambda kv: -kv[1])
+    lines = [f"**{state['titles'].get(title) or title}** · {profile(uid)} · {clock(n)}" for (uid, title), n in ranked[:10]]
+    if len(ranked) > 10:
+        lines.append(tr(lang, "more_games", n=len(ranked) - 10))
+    fields = [(tr(lang, "f_played"), clock(total))]
+    if len(per_profile) > 1:
+        fields += [(profile(uid), clock(n)) for uid, n in sorted(per_profile.items(), key=lambda kv: -kv[1])[:6]]
+    busiest = max(per_day, key=per_day.get)
+    fields.append((tr(lang, "f_busiest"), f"{short(busiest)} · {clock(per_day[busiest])}"))
+    sizes = stats.get("sizes", {})
+    upto = [sizes[d] for d in sorted(sizes) if d <= days[-1]]
+    before = [sizes[d] for d in sorted(sizes) if d < days[0]]
+    if upto:
+        text = f"{upto[-1] / 1024 ** 3:.2f} GB"
+        if before:
+            delta = (upto[-1] - before[-1]) / 1048576
+            text += " (" + tr(lang, "week_delta", delta=f"{'+' if delta >= 0 else '−'}{abs(delta):.0f}") + ")"
+        fields.append((tr(lang, "f_total"), text))
+    return make_embed(tr(lang, "weekly_title", start=short(days[0]), end=short(days[-1])),
+                      "\n".join(lines) + "\n\n" + tr(lang, "weekly_note"), 0x7C8CFF, fields)
+
+
+def weekly_summary(cfg):
+    """Chamado pelo daemon: envia o resumo da semana que fechou, uma vez só."""
+    with locked():
+        state = load_state()
+        start = weekly_due(state["meta"], dt.datetime.now())
+        save_json(STATE_FILE, state)
+    if start is None or not cfg["notify"]["weekly_summary"] or not webhook_url():
+        return
+    embed = weekly_embed(cfg, state, load_stats(), start)
+    if embed:
+        send_embed(embed)
+        log.info("resumo semanal enviado (semana de %s)", start)
 
 
 # ---------------------------------------------------------------- PS5 (leitura)
@@ -838,6 +922,10 @@ def daemon(cfg):
             if verify_due(cfg, load_state()["meta"], now):
                 verifier = threading.Thread(target=run_verify, args=(cfg,), daemon=True)
                 verifier.start()
+            try:
+                weekly_summary(cfg)
+            except Exception as e:
+                log.warning("resumo semanal falhou: %s: %s", type(e).__name__, e)
         due = schedule_due(cfg, last_sched, now)
         if ps5_online(cfg):
             fails = 0

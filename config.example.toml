@@ -71,4 +71,7 @@ error_cooldown_minutes = 60
 session_gap_hours = 6
 # Um jogo aparece como "jogando agora" enquanto gravar saves dentro desta janela.
 now_playing_minutes = 15
+# Toda segunda de manhã: tempo de jogo da semana por jogo e perfil, e o espaço ocupado.
+# Semana sem jogo não gera mensagem.
+weekly_summary = true
 language = "pt-BR"   # idioma dos avisos: "pt-BR" ou "en"

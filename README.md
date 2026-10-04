@@ -177,6 +177,10 @@ São dois avisos por sessão. Falhas repetidas geram no máximo um aviso por hor
 A mensagem mostra como "jogando agora" os jogos que gravaram saves nos últimos
 15 minutos; a janela é ajustável.
 
+Toda segunda de manhã chega também um **resumo da semana**: tempo de jogo por
+jogo e por perfil, o dia mais jogado e o espaço ocupado. Semana sem jogo não
+gera mensagem, e dá para desligar em Ajustes.
+
 O webhook fica em `data/secrets.json`, fora do repositório. Qualquer outra URL
 recebe um POST de texto simples (serve para ntfy, por exemplo).
 
