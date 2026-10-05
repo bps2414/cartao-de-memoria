@@ -10,6 +10,14 @@ release (`0.Y.0`) may change `config.toml` keys; anything that does is listed un
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-05
+
+### Added
+- `ps5backup diag` and `memcard.exe diag`: read-only FTP diagnostics with version,
+  privacy-preserving banner/reply summaries, MLSD, counts and a test RETR.
+- `GET /api/diag`, protected by the same API login with Portuguese or English reports.
+- Compatibility tables in both languages and an issue form for new reports.
+
 ## [0.5.0] - 2026-10-05
 
 ### Added
@@ -111,7 +119,8 @@ First release.
 - Dashboard: console usage map, estimated play time, space per game and a 12-month
   projection simulated with the real retention rules.
 
-[Unreleased]: https://github.com/bps2414/memcard/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/bps2414/memcard/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/bps2414/memcard/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/bps2414/memcard/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/bps2414/memcard/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/bps2414/memcard/compare/v0.4.0...v0.4.1

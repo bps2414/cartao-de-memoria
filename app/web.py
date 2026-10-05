@@ -224,6 +224,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(UI_FILE, "text/html; charset=utf-8")
         if path == "/api/overview":
             return self.send_json(overview())
+        if path == "/api/diag":
+            cfg = core.load_config()
+            lang = self.headers.get("X-Lang", "")
+            text, _ = core.diagnose(cfg, lang if lang in LANGS else cfg["notify"]["language"])
+            return self.send_json({"text": text})
         if path == "/api/stats":
             stats = core.load_stats()
             return self.send_json({"slots": stats["slots"], "sizes": stats["sizes"]})

@@ -10,6 +10,14 @@ fica em **Alterado** ou **Removido**. A versão atual também está em `VERSION`
 
 ## [Não lançado]
 
+## [0.6.0] - 2026-10-05
+
+### Adicionado
+- `ps5backup diag` e `memcard.exe diag`: diagnóstico FTP somente leitura, com versão,
+  banner/respostas resumidos por privacidade, MLSD, contagens e RETR de teste.
+- `GET /api/diag`, protegido pelo mesmo login da API e com relatório em português ou inglês.
+- Tabela de compatibilidade nos dois idiomas e formulário de issue para novos relatos.
+
 ## [0.5.0] - 2026-10-05
 
 ### Adicionado
@@ -111,7 +119,8 @@ Primeira versão.
 - Painel: mapa de uso do console, tempo de jogo estimado, espaço por jogo e projeção
   de 12 meses simulada com as regras reais de retenção.
 
-[Não lançado]: https://github.com/bps2414/memcard/compare/v0.5.0...HEAD
+[Não lançado]: https://github.com/bps2414/memcard/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/bps2414/memcard/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/bps2414/memcard/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/bps2414/memcard/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/bps2414/memcard/compare/v0.4.0...v0.4.1

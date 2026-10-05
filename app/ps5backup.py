@@ -1,6 +1,6 @@
 """Backup versionado dos saves de um PS5 (jailbreak) para o servidor.
 
-Somente leitura no PS5: usa apenas CWD/MLSD/RETR no ftpsrv. Nada é gravado,
+Somente leitura no PS5: CWD/MLSD/RETR, FEAT/SYST só no diagnóstico. Nada é gravado,
 apagado ou restaurado no console. Sem dependências além da biblioteca padrão.
 """
 import argparse
@@ -14,6 +14,7 @@ import json
 import logging
 import logging.handlers
 import os
+import platform
 import re
 import shutil
 import socket
@@ -45,7 +46,7 @@ def storage_paths():
     return Path(os.environ.get("PS5BACKUP_CONFIG", config)), Path(os.environ.get("PS5BACKUP_DATA", data))
 
 
-VERSION = "0.5.0"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
+VERSION = "0.6.0"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
 CONFIG_PATH, DATA_DIR = storage_paths()
 SAVES_DIR = DATA_DIR / "saves"
 ART_DIR = DATA_DIR / "cache" / "art"
@@ -1251,6 +1252,183 @@ def cmd_discover(cfg):
     return 0 if found else 1
 
 
+def diag_reply(value, command, lang):
+    """Só códigos e identificadores conhecidos: o servidor pode ecoar dados privados."""
+    text = str(value)
+    code = re.match(r"\d{3}(?=[ -]|$)", text)
+    parts = [code.group() if code else "---"]
+    if command == "banner":
+        server = re.search(r"\bftpsrv(?:[ /v]+(\d+\.\d+\.\d+))?\b", text, re.I)
+        if server:
+            parts.append("ftpsrv" + (" " + server[1] if server[1] else ""))
+    elif command == "SYST":
+        for system in ("UNIX", "WIN32", "PS5"):
+            if re.search(rf"\b{system}\b", text, re.I):
+                parts.append(system)
+        if re.search(r"\bType: L8\b", text, re.I):
+            parts.append("Type: L8")
+    elif command == "FEAT":
+        for line in text.splitlines():
+            feature = re.fullmatch(r"\s*(MLST|MLSD|UTF8|TVFS|REST STREAM|SIZE|MDTM|EPSV|EPRT)\s*", line, re.I)
+            if feature:
+                parts.append(feature[1].upper())
+            elif re.fullmatch(r"\s*MLST\s+(?:[a-z]+\*?;)+\s*", line, re.I):
+                facts = [key for key in ("type", "size", "modify") if re.search(rf"\b{key}\*?;", line, re.I)]
+                parts.append("MLST " + ";".join(facts))
+    return " ".join(parts) + " · " + tr(lang, "d_reply_hidden")
+
+
+def diagnose(cfg, lang="pt-BR"):
+    """Sessão independente, sem descoberta, estado local ou nomes de usuários."""
+    def t(key, **kw):
+        return tr(lang, key, **kw)
+
+    lines = [t("d_heading"), f"Memcard: {VERSION}",
+             t("d_system", system=f"{platform.system()} {platform.release()}"),
+             f"Python: {platform.python_version()}"]
+    missing, entries, profiles = [], [], []
+    ftp = ftplib.FTP()
+    stage = "connection"
+
+    def fail(key):
+        value = t(key)
+        if value not in missing:
+            missing.append(value)
+
+    def listing(path, optional=False):
+        try:
+            ftp.cwd(path)
+        except ftplib.error_perm:
+            if not optional:
+                fail("d_navigation")
+            return None
+        result = [(name, facts) for name, facts in ftp.mlsd() if name not in (".", "..")]
+        entries.extend(facts for _, facts in result)
+        return result
+
+    try:
+        if not cfg["ps5"]["host"]:
+            raise ValueError
+        ftp.connect(cfg["ps5"]["host"], cfg["ps5"]["ftp_port"], timeout=30)
+        lines.append("FTP banner: " + diag_reply(ftp.getwelcome(), "banner", lang))
+        ftp.login()
+        lines.append(t("d_connection", result=t("d_ok")))
+        for command in ("SYST", "FEAT"):
+            try:
+                reply = diag_reply(ftp.sendcmd(command), command, lang)
+            except (ftplib.error_perm, ftplib.error_temp) as e:
+                reply = t("d_refused", code=diag_reply(e, "error", lang))
+            lines.append(f"{command}: {reply}")
+
+        stage = "mlsd"
+        try:
+            current = listing("/", optional=True)
+        except (ftplib.error_perm, ftplib.error_temp):
+            current = None  # a raiz só serve de referência; o backup usa /user/home
+        argument, refusal = None, None
+        try:
+            argument = [(name, facts) for name, facts in ftp.mlsd("/user/home") if name not in (".", "..")]
+        except (ftplib.error_perm, ftplib.error_temp) as e:
+            refusal = t("d_refused", code=diag_reply(e, "error", lang))
+        home = listing("/user/home")
+        lines.append(t("d_mlsd", result=t("d_ok") if home is not None else t("d_failed")))
+        signature = lambda items: {(name, facts.get("type")) for name, facts in (items or [])}
+        if refusal:
+            behavior = refusal
+        elif current is not None and home is not None and signature(current) != signature(home) and signature(argument) == signature(home):
+            behavior = t("d_argument_yes")
+        elif current is not None and home is not None and signature(current) != signature(home) and signature(argument) == signature(current):
+            behavior = t("d_argument_no")
+        else:
+            behavior = t("d_inconclusive")
+        lines.append(t("d_argument", result=behavior))
+        profiles = [name for name, facts in (home or []) if UID_RE.fullmatch(name) and facts.get("type") == "dir"]
+        lines.append(t("d_profiles", n=len(profiles)))
+        if not profiles:
+            fail("d_no_profiles")
+        counts, candidates, databases = dict.fromkeys(SAVE_KINDS, 0), [], []
+        for uid in profiles:
+            for kind in SAVE_KINDS:
+                titles = listing(f"/user/home/{uid}/{kind}", optional=True)
+                if titles is None:
+                    continue
+                counts[kind] += 1
+                databases.append(f"/system_data/{kind}/{uid}/db/user/savedata.db")
+                for title, facts in titles:
+                    if facts.get("type") != "dir" or not TITLE_RE.fullmatch(title):
+                        continue
+                    path = f"/user/home/{uid}/{kind}/{title}"
+                    for name, facts in listing(path) or []:
+                        if facts.get("type") == "file" and re.fullmatch(r"\d+", facts.get("size", "")):
+                            candidates.append((int(facts["size"]), f"{path}/{name}"))
+        for kind, count in counts.items():
+            lines.append(t("d_kind", kind=kind, n=count))
+        for key in ("type", "size", "modify"):
+            sampled = [facts for facts in entries if facts.get("type") == "file"] if key != "type" else entries
+            good = bool(sampled) and all(
+                facts.get("type") in ("dir", "file", "cdir", "pdir") if key == "type" else
+                bool(re.fullmatch(r"\d+", facts.get("size", ""))) if key == "size" else
+                bool(re.fullmatch(r"\d{14}(?:\.\d+)?", facts.get("modify", ""))) for facts in sampled)
+            lines.append(t("d_fact", fact=key, result=t("d_ok") if good else t("d_failed")))
+            if not good:
+                fail("d_facts")
+        stage = "metadata"
+        appmeta = listing("/user/appmeta", optional=True)
+        lines.append(t("d_appmeta", result=t("d_ok") if appmeta is not None else t("d_optional_missing")))
+        db_result = t("d_optional_missing")
+        for path in databases:
+            try:
+                raw = ftp_bytes(ftp, path)
+                with closing(sqlite3.connect(":memory:")) as db:
+                    db.deserialize(raw)
+                    db.execute("SELECT title_id, dir_name, main_title, sub_title, detail FROM savedata LIMIT 1").fetchone()
+                db_result = t("d_ok")
+                break
+            except (*ftplib.all_errors, sqlite3.Error) as e:
+                db_result = t("d_optional_error", code=diag_reply(e, "error", lang))
+        lines.append(t("d_database", result=db_result))
+        stage = "retr"
+        if candidates:
+            size, path = min(candidates)
+            received = 0
+
+            def count(chunk):
+                nonlocal received
+                received += len(chunk)
+
+            start = time.monotonic()
+            try:
+                ftp.retrbinary(f"RETR {path}", count)
+                lines.append(t("d_retr", size=received, seconds=f"{time.monotonic() - start:.3f}"))
+                if received != size:
+                    fail("d_retr_size")
+            except ftplib.all_errors as e:
+                lines.append(t("d_retr_failed", code=diag_reply(e, "error", lang)))
+                fail("d_transfer")
+        else:
+            lines.append(t("d_no_save"))
+            fail("d_transfer")
+    except Exception as e:
+        if stage == "mlsd":
+            lines.append(t("d_mlsd", result=t("d_failed")))
+        lines.append(t("d_error", code=diag_reply(e, "error", lang)))
+        fail("d_connect_required" if stage == "connection" else "d_required")
+    finally:
+        if ftp.sock is not None:
+            try:
+                ftp.quit()
+            except ftplib.all_errors:
+                ftp.close()
+    lines.append(t("d_missing", items="; ".join(missing)) if missing else t("d_complete"))
+    return "\n".join(lines), 1 if missing else 0
+
+
+def cmd_diag(cfg):
+    text, code = diagnose(cfg)
+    print(text)
+    return code
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--version", action="version", version=f"ps5backup {VERSION}")
@@ -1259,6 +1437,7 @@ def main():
     sub.add_parser("backup", help="roda um backup agora (disparo manual)")
     sub.add_parser("status", help="estado do PS5 e do último backup")
     sub.add_parser("discover", help="procura o PS5 na rede (IP e porta) e grava no config")
+    sub.add_parser("diag", help="diagnóstico FTP somente leitura para relatar compatibilidade")
     sub.add_parser("list", help="lista saves guardados e o caminho da versão mais nova")
     verify = sub.add_parser("verify", help="confere o checksum de todas as versões")
     verify.add_argument("--remote", action="store_true", help="também compara com o PS5 ao vivo")
@@ -1267,6 +1446,8 @@ def main():
     argv = sys.argv[1:]
     args = parser.parse_args(["daemon"] if frozen and not argv else argv)
     cfg = load_config()
+    if args.cmd == "diag":
+        return cmd_diag(cfg)
     setup_logging()
     if args.cmd == "daemon":
         import web

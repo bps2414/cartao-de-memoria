@@ -1,0 +1,40 @@
+name: Compatibilidade / Compatibility
+description: Relate o resultado no seu console / Report results on your console
+title: "[Compatibilidade] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Rode `ps5backup diag` (Docker) ou `memcard.exe diag` (Windows) e cole o bloco completo.
+        Run `ps5backup diag` (Docker) or `memcard.exe diag` (Windows) and paste the whole block.
+        Não inclua IP, nome/ID de perfil ou nome de save. / Do not include IPs, profile names/IDs or save names.
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware do PS5 / PS5 firmware
+    validations:
+      required: true
+  - type: input
+    id: ftp_server
+    attributes:
+      label: Servidor de FTP / FTP server
+    validations:
+      required: true
+  - type: input
+    id: ftp_version
+    attributes:
+      label: Versão do servidor / Server version
+    validations:
+      required: true
+  - type: textarea
+    id: diag
+    attributes:
+      label: Saída completa do diag / Full diag output
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Resultado e observações / Result and notes
+      description: A cópia terminou e as versões apareceram? / Did the backup finish and versions appear?

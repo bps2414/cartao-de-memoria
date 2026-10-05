@@ -298,6 +298,7 @@ These are plain files: you can copy the whole folder to another disk or to the c
 ```sh
 docker compose logs -f ps5-backup                          # follow the log
 docker compose exec ps5-backup ps5backup status            # current state
+docker compose exec ps5-backup ps5backup diag              # compatibility diagnostics
 docker compose exec ps5-backup ps5backup backup            # back up now
 docker compose exec ps5-backup ps5backup list              # saves and the path of the latest version
 docker compose exec ps5-backup ps5backup verify            # check checksums
@@ -317,7 +318,7 @@ docker compose exec ps5-backup ps5backup prune             # apply cleanup now
   port 8765 on your router: the connection is plain HTTP, unencrypted.
 - The PS5's ftpsrv has no password either and gives write access to the console
   to any device on the network. This project only uses the read commands
-  (`CWD`, `MLSD`, `RETR`).
+  (`CWD`, `MLSD`, `RETR`, plus `FEAT` and `SYST` only for diagnostics).
 
 ## Versions
 
@@ -341,6 +342,8 @@ On every cycle the service lists `/user/home/<profile>/savedata_prospero/<game>/
 reading, downloads only what changed and, by listing again, confirms the file
 did not change during the copy. Names and artwork come from `/user/appmeta` and
 the console's save database. Tested with ftpsrv v0.21.1 on firmware 13.42.
+See the [compatibility table](docs/COMPATIBILITY.en.md) and how to report
+`ps5backup diag` or `memcard.exe diag` results on your console.
 
 ## What's next
 

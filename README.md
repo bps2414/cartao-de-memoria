@@ -292,6 +292,7 @@ São arquivos comuns: dá para copiar a pasta inteira para outro disco ou nuvem.
 ```sh
 docker compose logs -f ps5-backup                          # acompanhar
 docker compose exec ps5-backup ps5backup status            # estado
+docker compose exec ps5-backup ps5backup diag              # diagnóstico de compatibilidade
 docker compose exec ps5-backup ps5backup backup            # copiar agora
 docker compose exec ps5-backup ps5backup list              # saves e caminho da última versão
 docker compose exec ps5-backup ps5backup verify            # conferir checksums
@@ -312,7 +313,7 @@ docker compose exec ps5-backup ps5backup prune             # aplicar a limpeza a
   roteador: a conexão é HTTP, sem criptografia.
 - O ftpsrv do PS5 também não tem senha e dá acesso de escrita ao console para
   qualquer aparelho da rede. Este projeto só usa os comandos de leitura
-  (`CWD`, `MLSD`, `RETR`).
+  (`CWD`, `MLSD`, `RETR`, além de `FEAT` e `SYST` só no diagnóstico).
 
 ## Versões
 
@@ -337,6 +338,8 @@ A cada ciclo o serviço lista `/user/home/<perfil>/savedata_prospero/<jogo>/`
 baixa só o que mudou e confere, relistando, que o arquivo não mudou durante a
 cópia. Nomes e artes vêm de `/user/appmeta` e do banco de saves do console.
 Testado com ftpsrv v0.21.1 no firmware 13.42.
+Veja a [tabela de compatibilidade](docs/COMPATIBILIDADE.md) e como relatar o
+resultado de `ps5backup diag` ou `memcard.exe diag` no seu console.
 
 ## Próximos passos
 
