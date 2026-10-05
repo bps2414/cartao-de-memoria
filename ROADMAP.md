@@ -46,6 +46,42 @@ qualquer coisa que escreva no console entra desligada por padrão.
 - **Registro técnico e linha de comando em inglês.** Hoje só a interface e os
   avisos são traduzidos; o `backup.log` e o `ps5backup` continuam em português.
 
+## Para a comunidade
+
+Hoje o Memcard serve a quem tem uma máquina sempre ligada em casa (servidor,
+NAS, mini PC) e sabe usar Docker. É um público pequeno, e as ferramentas que já
+existem (Garlic SaveMgr, Apollo Save Tool, PS5-Suite, Kura) cobrem o resto, mas
+são manuais: você abre e exporta quando lembra. O que, pelo que se vê, só o
+Memcard faz é **cópia automática, com histórico versionado e retenção, fora do
+console**. Para outras pessoas usarem, falta, nesta ordem:
+
+1. **Conferir a sobreposição com o Garlic SaveMgr.** Ele já tem um auto-backup
+   próprio (a API `/api/cloud/auto_status`). Antes de investir mais, ver o que
+   ele guarda (só a última cópia ou um histórico?) e para onde. Se cobrir o
+   essencial, o Memcard vira a camada de histórico, verificação e avisos por
+   cima dele, e isso precisa estar claro no README.
+2. **Rodar sem Docker e no Windows.** O núcleo usa `fcntl` (só Linux e macOS) e
+   a biblioteca padrão do resto, então é perto de portátil. Trocar o travamento
+   por algo multiplataforma e publicar um executável para Windows (PyInstaller),
+   com a interface no navegador, abre o projeto para quem joga e tem só um PC.
+   É o item que mais amplia o público.
+3. **Restauração validada** (item 1 de Próximo). Ninguém deveria confiar num
+   backup que o autor nunca restaurou, e ninguém de fora vai testar por ele.
+4. **Instalar em 5 minutos.** Hoje é copiar `config.toml` e `.env` e editar à
+   mão. Um assistente no primeiro acesso (acha o PS5, testa a conexão, pede o
+   webhook) e um guia com prints, do console desbloqueado até a primeira cópia.
+5. **Mais firmwares e payloads.** Testado só com ftpsrv 0.21.1 no firmware
+   13.42. Registrar o que funciona (e o que não) por firmware e por servidor de
+   FTP, e fixar isso em uma tabela de compatibilidade.
+6. **Saves de PS4 e mais de um console** (já em Depois), porque muita gente tem
+   os dois.
+7. **Divulgação.** Só vale depois dos itens 1 a 4: um GIF curto, as releases com
+   o executável e um post onde a comunidade de homebrew do PS5 conversa.
+
+Se o item 1 mostrar que o Garlic já resolve, a decisão honesta é manter o
+Memcard como ferramenta pessoal estável, em vez de crescer um projeto para um
+público que não precisa dele.
+
 ## Explorar: um payload próprio
 
 Hoje o serviço descobre tudo de fora, perguntando ao FTP a cada 30 segundos.
