@@ -17,7 +17,7 @@ interface.
 - **Version history** for every save, with checksums, so you can go back in time.
 - **Cleanup that doesn't erase the past:** old versions are thinned out, not wiped, and go through a trash folder first.
 - **Discord notifications without the flood:** one message per play session, edited in place.
-- **No dependencies:** a single Python container using only the standard library.
+- **No runtime dependencies:** only the Python standard library.
 - **Interface and notifications in English or Brazilian Portuguese.**
 
 > This project exists to keep **your own saves** safe. It does not copy games
@@ -29,7 +29,7 @@ interface.
    ([ps5-payload-dev/ftpsrv](https://github.com/ps5-payload-dev/ftpsrv)) on
    port 2121. Most payload bundles load it for you.
 2. An always-on computer in the same network (server, laptop, mini PC, NAS)
-   with **Docker** and **Docker Compose**.
+   with **Windows** or with **Docker** and **Docker Compose**.
 3. A fixed IP for the PS5 on your router (DHCP reservation), so it doesn't change.
 
 To restore a save you will also want
@@ -82,7 +82,45 @@ backup happens on its own in under a minute.
 Backups live in the `data/` folder next to the project. To keep them on another
 disk, change `BACKUP_DIR` in `.env`.
 
-### Without Docker (Windows or Linux)
+### Windows, without Docker
+
+1. Download `memcard.exe` and `memcard.exe.sha256` from the
+   [release](https://github.com/bps2414/memcard/releases/latest) and keep both in
+   a folder where you can write files. You do not need to install Python.
+2. Check the SHA-256 in PowerShell, from that folder:
+
+   ```powershell
+   (Get-FileHash .\memcard.exe -Algorithm SHA256).Hash.ToLower()
+   Get-Content .\memcard.exe.sha256
+   ```
+
+   The first result must match the hash at the start of the second.
+3. Double-click `memcard.exe`. The executable is not digitally signed, so
+   SmartScreen may show **Windows protected your PC**. After checking the hash,
+   use **More info › Run anyway**.
+4. The interface opens in your browser at `http://127.0.0.1:8765`. Under
+   **Settings › Console**, check the PS5's IP or use **Find now**. Keep the
+   console window open while you want backups running. Opening the executable
+   again only reopens the interface.
+
+Settings (`config.toml`, created when you save in the interface) and the
+`data/` folder live next to the executable, even when a shortcut starts it from
+another folder. `data/` holds saves, history, the log and the webhook. To use
+other paths, set `PS5BACKUP_CONFIG` and `PS5BACKUP_DATA` in the environment.
+
+In the executable, the interface only listens on this PC (`127.0.0.1`). The
+`WEB_BIND` environment variable changes that address; `0.0.0.0` allows access
+from the local network.
+
+To start with Windows, create a shortcut to `memcard.exe`, press **Win+R**, type
+`shell:startup` and put the shortcut in the folder that opens. It starts after
+you sign in to your Windows account.
+
+**There are no automatic updates on Windows.** To update, close Memcard,
+download the new version, check its SHA-256 and replace only `memcard.exe`,
+keeping `config.toml` and `data/`.
+
+### From source, without Docker (Windows or Linux)
 
 With **Python 3.13**, copy `config.example.toml` to `config.toml` and set the
 console's IP. Set `PS5BACKUP_CONFIG` to the full path of that file and
@@ -269,9 +307,10 @@ docker compose exec ps5-backup ps5backup prune             # apply cleanup now
 
 ## Security
 
-- By default the interface **has no password**: any device on the local network
-  can open it. To require a login, set `WEB_PASSWORD` in `.env` and run
-  `docker compose up -d`. Once set, everything asks for a login: pages, API and
+- By default the interface **has no password**. In the executable, only this PC
+  can open it; with Docker or source runs, any device on the local network can.
+  To require a login, set `WEB_PASSWORD` in the environment. With Docker, use
+  `.env` and run `docker compose up -d`. Once set, everything asks for a login: pages, API and
   downloads. A session lasts 30 days, and five wrong passwords in a row block
   further attempts from that device for 5 minutes.
 - Even with a password, use it only on your local network and do not forward

@@ -16,7 +16,7 @@ de um console com jailbreak para um computador da sua rede, com interface web.
 - **Histórico de versões** de cada save, com checksum, para voltar no tempo.
 - **Limpeza que não destrói o passado:** versões antigas são rareadas, não zeradas, e passam por uma lixeira.
 - **Avisos no Discord sem enxurrada:** uma mensagem por sessão de jogo, editada no lugar.
-- **Sem dependências:** um container Python só com a biblioteca padrão.
+- **Sem dependências em execução:** só a biblioteca padrão do Python.
 - **Interface e avisos em português ou inglês.**
 
 > Este projeto serve para guardar os **seus próprios saves**. Ele não copia jogos
@@ -28,7 +28,7 @@ de um console com jailbreak para um computador da sua rede, com interface web.
    ([ps5-payload-dev/ftpsrv](https://github.com/ps5-payload-dev/ftpsrv)) rodando
    (porta 2121). A maioria dos pacotes de payloads já o carrega.
 2. Um computador sempre ligado na mesma rede (servidor, notebook, mini PC, NAS)
-   com **Docker** e **Docker Compose**.
+   com **Windows** ou com **Docker** e **Docker Compose**.
 3. O IP do PS5 fixo no roteador (reserva de DHCP), para ele não mudar.
 
 Para restaurar um save você também vai querer o
@@ -80,7 +80,43 @@ primeira cópia acontece sozinha em menos de um minuto.
 Os backups ficam na pasta `data/`, ao lado do projeto. Para guardar em outro
 disco, mude `BACKUP_DIR` no `.env`.
 
-### Sem Docker (Windows ou Linux)
+### Windows, sem Docker
+
+1. Baixe `memcard.exe` e `memcard.exe.sha256` na
+   [release](https://github.com/bps2414/memcard/releases/latest) e guarde os dois
+   numa pasta sua, onde você possa gravar arquivos. Não precisa instalar Python.
+2. Confira o SHA-256 no PowerShell, dentro dessa pasta:
+
+   ```powershell
+   (Get-FileHash .\memcard.exe -Algorithm SHA256).Hash.ToLower()
+   Get-Content .\memcard.exe.sha256
+   ```
+
+   O primeiro resultado deve ser igual ao hash no começo do segundo.
+3. Abra `memcard.exe` com dois cliques. O executável não tem assinatura digital,
+   então o SmartScreen pode mostrar **O Windows protegeu o computador**. Depois
+   de conferir o hash, use **Mais informações › Executar assim mesmo**.
+4. A interface abre no navegador em `http://127.0.0.1:8765`. Em **Ajustes › Console**,
+   confira o IP do PS5 ou use **Procurar agora**. Mantenha a janela do console
+   aberta enquanto quiser os backups. Abrir o executável de novo só reabre a interface.
+
+Os ajustes (`config.toml`, criado ao salvar na interface) e a pasta `data/`
+ficam ao lado do executável, mesmo quando ele é iniciado por um atalho de outra
+pasta. `data/` guarda os saves, o histórico, o registro e o webhook. Para usar
+outros caminhos, defina `PS5BACKUP_CONFIG` e `PS5BACKUP_DATA` no ambiente.
+
+No executável, a interface só escuta no próprio PC (`127.0.0.1`). A variável de
+ambiente `WEB_BIND` muda esse endereço; `0.0.0.0` permite acesso pela rede local.
+
+Para iniciar com o Windows, crie um atalho para `memcard.exe`, pressione
+**Win+R**, digite `shell:startup` e coloque o atalho na pasta que abrir. Ele
+inicia depois que você entrar na sua conta do Windows.
+
+**Não há atualização automática no Windows.** Para atualizar, feche o Memcard,
+baixe a nova versão, confira o SHA-256 e substitua só o `memcard.exe`, preservando
+`config.toml` e `data/`.
+
+### Pelo código-fonte, sem Docker (Windows ou Linux)
 
 Com **Python 3.13**, copie `config.example.toml` para `config.toml` e ajuste o
 IP do console. Defina `PS5BACKUP_CONFIG` com o caminho completo desse arquivo e
@@ -265,8 +301,10 @@ docker compose exec ps5-backup ps5backup prune             # aplicar a limpeza a
 
 ## Segurança
 
-- Por padrão a interface **não tem senha**: qualquer aparelho da rede local abre.
-  Para exigir login, defina `WEB_PASSWORD` no `.env` e rode `docker compose up -d`.
+- Por padrão a interface **não tem senha**. No executável, só o próprio PC abre;
+  no Docker e no código-fonte, qualquer aparelho da rede local abre.
+  Para exigir login, defina `WEB_PASSWORD` no ambiente. No Docker, use o `.env`
+  e rode `docker compose up -d`.
   Com a senha definida, tudo pede login: páginas, API e downloads. A sessão dura
   30 dias e cinco senhas erradas seguidas bloqueiam novas tentativas daquele
   aparelho por 5 minutos.

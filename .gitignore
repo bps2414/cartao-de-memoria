@@ -2,3 +2,6 @@
 config.toml
 data/
 __pycache__/
+dist/
+build/
+*.spec

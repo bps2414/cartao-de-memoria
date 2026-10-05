@@ -24,6 +24,7 @@ import time
 import tomllib
 import urllib.error
 import urllib.request
+import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing, contextmanager
 from pathlib import Path
@@ -35,9 +36,17 @@ else:
 
 from i18n import LANGS, Msg, tr
 
-VERSION = "0.4.2"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
-CONFIG_PATH = Path(os.environ.get("PS5BACKUP_CONFIG", "/config/config.toml"))
-DATA_DIR = Path(os.environ.get("PS5BACKUP_DATA", "/data"))
+
+def storage_paths():
+    """No executável, ajustes e backups ficam ao lado dele."""
+    base = Path(sys.executable).parent if getattr(sys, "frozen", False) else None
+    config = base / "config.toml" if base else Path("/config/config.toml")
+    data = base / "data" if base else Path("/data")
+    return Path(os.environ.get("PS5BACKUP_CONFIG", config)), Path(os.environ.get("PS5BACKUP_DATA", data))
+
+
+VERSION = "0.5.0"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
+CONFIG_PATH, DATA_DIR = storage_paths()
 SAVES_DIR = DATA_DIR / "saves"
 ART_DIR = DATA_DIR / "cache" / "art"
 STATE_FILE = DATA_DIR / "state.json"
@@ -1254,13 +1263,29 @@ def main():
     verify = sub.add_parser("verify", help="confere o checksum de todas as versões")
     verify.add_argument("--remote", action="store_true", help="também compara com o PS5 ao vivo")
     sub.add_parser("prune", help="aplica a retenção agora")
-    args = parser.parse_args()
+    frozen = getattr(sys, "frozen", False)
+    argv = sys.argv[1:]
+    args = parser.parse_args(["daemon"] if frozen and not argv else argv)
     cfg = load_config()
     setup_logging()
     if args.cmd == "daemon":
         import web
-        threading.Thread(target=web.serve, daemon=True).start()
-        daemon(cfg)
+        if not frozen:
+            threading.Thread(target=web.serve, daemon=True).start()
+            daemon(cfg)
+            return 0
+        url = f"http://127.0.0.1:{web.PORT}"
+        try:
+            server = web.create_server()  # bind antes de iniciar qualquer rodada
+        except OSError as e:
+            if e.errno != errno.EADDRINUSE and getattr(e, "winerror", None) != 10048:
+                raise
+            webbrowser.open(url)
+            return 0
+        with server:
+            threading.Thread(target=web.serve, args=(server,), daemon=True).start()
+            webbrowser.open(url)
+            daemon(cfg)
     elif args.cmd == "backup":
         return 0 if safe_run(cfg, "manual") else 1
     elif args.cmd == "status":

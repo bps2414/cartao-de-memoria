@@ -10,6 +10,21 @@ release (`0.Y.0`) may change `config.toml` keys; anything that does is listed un
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-05
+
+### Added
+- `memcard.exe` for Windows: a double-click starts backups and opens the web interface in your browser.
+- Workflow to build the executable with Python 3.13 and PyInstaller 6.22.3 on `v*` tags,
+  with the interface bundled and SHA-256 attached to the release.
+- Download, SmartScreen, SHA-256 checking and Windows startup instructions in both README files.
+
+### Changed
+- In the executable, `config.toml` and `data/` live next to it; with no arguments, it starts the daemon.
+- The executable's interface listens on `127.0.0.1`; `WEB_BIND` allows changing the address.
+  Docker and source runs still use `0.0.0.0` by default.
+- The web port is reserved before starting the daemon. If it is already in use, a second
+  run of the executable only opens the browser and exits with code 0.
+
 ## [0.4.2] - 2026-10-05
 
 ### Added
@@ -96,7 +111,8 @@ First release.
 - Dashboard: console usage map, estimated play time, space per game and a 12-month
   projection simulated with the real retention rules.
 
-[Unreleased]: https://github.com/bps2414/memcard/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/bps2414/memcard/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/bps2414/memcard/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/bps2414/memcard/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/bps2414/memcard/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/bps2414/memcard/compare/v0.3.0...v0.4.0

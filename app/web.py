@@ -11,6 +11,8 @@ import hmac
 import json
 import os
 import re
+import socket
+import sys
 import threading
 import time
 from http.cookies import SimpleCookie
@@ -335,5 +337,23 @@ class Handler(BaseHTTPRequestHandler):
         raise Msg("e_unknown_route")
 
 
-def serve():
-    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+def create_server():
+    frozen = getattr(sys, "frozen", False)
+    bind = os.environ.get("WEB_BIND", "127.0.0.1" if frozen else "0.0.0.0")
+    if not frozen or os.name != "nt":
+        return ThreadingHTTPServer((bind, PORT), Handler)
+    server = ThreadingHTTPServer((bind, PORT), Handler, bind_and_activate=False)
+    try:
+        # SO_REUSEADDR no Windows deixaria a segunda cópia ocupar a mesma porta.
+        server.allow_reuse_address = False
+        server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        server.server_bind()
+        server.server_activate()
+    except OSError:
+        server.server_close()
+        raise
+    return server
+
+
+def serve(server=None):
+    (server or create_server()).serve_forever()

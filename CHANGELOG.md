@@ -10,6 +10,21 @@ fica em **Alterado** ou **Removido**. A versão atual também está em `VERSION`
 
 ## [Não lançado]
 
+## [0.5.0] - 2026-10-05
+
+### Adicionado
+- Executável `memcard.exe` para Windows: dois cliques iniciam os backups e abrem a interface no navegador.
+- Workflow para gerar o executável com Python 3.13 e PyInstaller 6.22.3 em tags `v*`,
+  com a interface embutida e SHA-256 anexado à release.
+- Instruções de download, SmartScreen, conferência de SHA-256 e início com o Windows nos dois README.
+
+### Alterado
+- No executável, `config.toml` e `data/` ficam ao lado dele; sem argumentos, inicia o daemon.
+- A interface do executável escuta em `127.0.0.1`; `WEB_BIND` permite trocar o endereço.
+  Docker e código-fonte continuam usando `0.0.0.0` por padrão.
+- A porta web é reservada antes de iniciar o daemon. Se já estiver ocupada, uma segunda
+  execução do executável só abre o navegador e termina com código 0.
+
 ## [0.4.2] - 2026-10-05
 
 ### Adicionado
@@ -96,7 +111,8 @@ Primeira versão.
 - Painel: mapa de uso do console, tempo de jogo estimado, espaço por jogo e projeção
   de 12 meses simulada com as regras reais de retenção.
 
-[Não lançado]: https://github.com/bps2414/memcard/compare/v0.4.2...HEAD
+[Não lançado]: https://github.com/bps2414/memcard/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/bps2414/memcard/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/bps2414/memcard/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/bps2414/memcard/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/bps2414/memcard/compare/v0.3.0...v0.4.0

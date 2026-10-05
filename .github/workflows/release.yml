@@ -1,0 +1,42 @@
+name: Executável Windows
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Testes (só biblioteca padrão)
+        run: python -m unittest discover -s tests -v
+      - name: Ferramenta de build
+        run: python -m pip install PyInstaller==6.22.3
+      - name: Executável com interface embutida
+        run: python -m PyInstaller --onefile --console --name memcard --add-data "app/ui:ui" app/memcard.py
+      - name: SHA-256
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash dist/memcard.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  memcard.exe" | Set-Content dist/memcard.exe.sha256 -Encoding ascii
+      - name: Anexar à release da tag
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release view $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:RELEASE_TAG --verify-tag --generate-notes
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          gh release upload $env:RELEASE_TAG dist/memcard.exe dist/memcard.exe.sha256 --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
