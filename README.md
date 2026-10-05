@@ -34,6 +34,23 @@ de um console com jailbreak para um computador da sua rede, com interface web.
 Para restaurar um save você também vai querer o
 [Garlic SaveMgr](https://git.etawen.dev/earthonion/garlic-savemgr) no PS5.
 
+## Memcard ou Garlic SaveMgr?
+
+Comparação com o [Garlic SaveMgr v1.13](https://git.etawen.dev/earthonion/garlic-savemgr):
+
+| | Garlic SaveMgr v1.13 | Memcard |
+|---|---|---|
+| Cópia automática | 15 s após fechar o jogo, se o save mudou | Save alterado, PS5 ligou, agenda ou manual; uma versão a cada 10 min durante o jogo |
+| Histórico | ZIP por jogo, acumulado sem apagar | Versões por arquivo, com retenção, lixeira e versões fixadas |
+| Destino | PS5, USB, FTP simples ou Google Drive (só com o navegador aberto) | Pasta no PC ou servidor |
+| Integridade | Sem conferência após a cópia | SHA-256 por versão e conferência semanal |
+| Avisos | Na tela do PS5 | Discord por sessão e resumo semanal |
+
+O Garlic sozinho basta se você quer cópias automáticas ao fechar o jogo e um
+histórico fora do console, sem retenção nem conferência de integridade.
+Se você não precisa de cópias durante o jogo nem de avisos no Discord, pode
+ficar com ele, que também é a ferramenta indicada abaixo para restaurar saves.
+
 ## Instalação
 
 ```sh

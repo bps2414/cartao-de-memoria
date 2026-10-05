@@ -35,6 +35,23 @@ interface.
 To restore a save you will also want
 [Garlic SaveMgr](https://git.etawen.dev/earthonion/garlic-savemgr) on the PS5.
 
+## Memcard or Garlic SaveMgr?
+
+Comparison with [Garlic SaveMgr v1.13](https://git.etawen.dev/earthonion/garlic-savemgr):
+
+| | Garlic SaveMgr v1.13 | Memcard |
+|---|---|---|
+| Automatic backup | 15 s after the game closes, if the save changed | Save changed, PS5 turned on, schedule or manual; one version every 10 min while playing |
+| History | ZIP per game, accumulated without deleting | Versions per file, with retention, trash and pinned versions |
+| Destination | PS5, USB, plain FTP or Google Drive (only with the browser open) | Folder on a PC or server |
+| Integrity | No check after copying | SHA-256 per version and weekly checks |
+| Notifications | On the PS5 screen | Discord per session and weekly summary |
+
+Garlic alone is enough if you want automatic backups when the game closes and
+a history outside the console, without retention or integrity checks.
+If you do not need backups while playing or Discord notifications, you can
+stick with it; it is also the tool recommended below for restoring saves.
+
 ## Installation
 
 ```sh
