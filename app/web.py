@@ -272,7 +272,10 @@ class Handler(BaseHTTPRequestHandler):
             threading.Thread(target=core.safe_run, args=(cfg, "manual"), daemon=True).start()
             return {"ok": True}
         if path == "/api/discover":
-            found = core.apply_discovery(cfg)
+            # O botão manda o que está digitado em Ajustes (ainda não salvo) como ponto de partida.
+            search = {**cfg, "ps5": {**cfg["ps5"], **{k: str(body[k]).strip() for k in ("host", "subnet") if k in body}}}
+            core.validate_config(search)
+            found = core.apply_discovery(cfg, search)
             if not found:
                 raise Msg("e_discover")
             return {"host": found[0], "port": found[1]}

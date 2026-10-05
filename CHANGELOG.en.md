@@ -10,6 +10,18 @@ release (`0.Y.0`) may change `config.toml` keys; anything that does is listed un
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-05
+
+### Changed
+- **Find now** uses the IP and subnet typed in Settings (even unsaved) and the scan also
+  tries 192.168.1.0/24 and 192.168.0.0/24, so it works with an empty or wrong address.
+
+### Fixed
+- Changing the IP or port in Settings now marks the PS5 offline within one probe (~13 s)
+  instead of waiting for 3 consecutive failures (~40 s); automatic discovery only runs
+  after the status has updated.
+- An empty `host` no longer connects to the local machine (it showed as "PS5 on at .").
+
 ## [0.4.0] - 2026-10-05
 
 ### Added
@@ -71,7 +83,8 @@ First release.
 - Dashboard: console usage map, estimated play time, space per game and a 12-month
   projection simulated with the real retention rules.
 
-[Unreleased]: https://github.com/bps2414/memcard/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/bps2414/memcard/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/bps2414/memcard/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/bps2414/memcard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/bps2414/memcard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/bps2414/memcard/compare/v0.1.0...v0.2.0

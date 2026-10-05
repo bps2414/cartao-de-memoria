@@ -346,8 +346,9 @@ const I18N = {
     "s_notify.weekly_summary": "Mandar um resumo da semana", "s_notify.weekly_summary_h": "Toda segunda de manhã: tempo de jogo por jogo e perfil, e o espaço ocupado. Semana sem jogo não gera mensagem.",
     set_console: "Console",
     "s_ps5.host": "Endereço do PS5",
-    "s_ps5.auto_discover": "Procurar o PS5 sozinho", "s_ps5.auto_discover_h": "Se o PS5 não responde, busca o IP e a porta do FTP na rede e atualiza aqui.",
-    "s_ps5.subnet": "Sub-rede a varrer", "s_ps5.subnet_h": "Ex.: 192.168.1.0/24. Vazio = a rede do endereço acima.",
+    "s_ps5.auto_discover": "Corrigir o endereço sozinho", "s_ps5.auto_discover_h": "Se o PS5 parar de responder (IP mudou), procura de novo e atualiza o endereço acima.",
+    "s_ps5.subnet": "Rede a procurar (avançado)", "s_ps5.subnet_h": "Deixe vazio na maioria dos casos: ele tenta a rede do endereço acima e as redes comuns (192.168.1.x e 192.168.0.x). Só preencha se a sua for outra, ex.: 10.0.0.0/24.",
+    find_ps5_title: "Não sabe o IP?", find_ps5_help: "Deixe o endereço vazio e clique: o Memcard acha o PS5 e a porta sozinho. O PS5 precisa estar ligado, com o ftpsrv carregado.",
     find_ps5: "Procurar agora", finding_ps5: "Procurando…", t_found: "PS5 encontrado em {host}:{port}.",
     "s_ps5.ftp_port": "Porta do ftpsrv", "s_ps5.ftp_port_h": "É por aqui que os saves são lidos.",
     "s_ps5.garlic_port": "Porta do Garlic SaveMgr", "s_ps5.garlic_port_h": "Usada só no atalho de restauração.",
@@ -464,8 +465,9 @@ const I18N = {
     "s_notify.weekly_summary": "Send a weekly summary", "s_notify.weekly_summary_h": "Every Monday morning: play time by game and profile, and storage used. A week with no play sends nothing.",
     set_console: "Console",
     "s_ps5.host": "PS5 address",
-    "s_ps5.auto_discover": "Find the PS5 automatically", "s_ps5.auto_discover_h": "If the PS5 stops responding, look for its IP and FTP port on the network and update them here.",
-    "s_ps5.subnet": "Subnet to scan", "s_ps5.subnet_h": "E.g. 192.168.1.0/24. Empty = the network of the address above.",
+    "s_ps5.auto_discover": "Fix the address by itself", "s_ps5.auto_discover_h": "If the PS5 stops responding (IP changed), search again and update the address above.",
+    "s_ps5.subnet": "Network to search (advanced)", "s_ps5.subnet_h": "Leave empty in most cases: it tries the network of the address above and the common ones (192.168.1.x and 192.168.0.x). Only fill it if yours is different, e.g. 10.0.0.0/24.",
+    find_ps5_title: "Don't know the IP?", find_ps5_help: "Leave the address empty and click: Memcard finds the PS5 and its port by itself. The PS5 must be on, with ftpsrv loaded.",
     find_ps5: "Find now", finding_ps5: "Searching…", t_found: "PS5 found at {host}:{port}.",
     "s_ps5.ftp_port": "ftpsrv port", "s_ps5.ftp_port_h": "This is where the saves are read from.",
     "s_ps5.garlic_port": "Garlic SaveMgr port", "s_ps5.garlic_port_h": "Only used for the restore shortcut.",
@@ -707,6 +709,7 @@ function closeDrawer() { openKey = null; $("#drawer").classList.remove("open"); 
 
 /* ---------- ajustes ---------- */
 // O rótulo e a ajuda de cada campo vêm do dicionário: "s_<seção.chave>" e "s_<seção.chave>_h".
+const $id = id => document.getElementById(id);
 const field = (path, control) => `<div class="f"><label for="${path}"><b>${t("s_" + path)}</b>${has(`s_${path}_h`) ? `<small>${t(`s_${path}_h`)}</small>` : ""}</label>${control}</div>`;
 const get = path => path.split(".").reduce((o, k) => o[k], data.config);
 const num = (path, min = 0) => field(path, `<input type="number" id="${path}" data-path="${path}" data-kind="int" min="${min}" value="${get(path)}">`);
@@ -771,7 +774,8 @@ function renderSettings() {
   <div class="panel"><h3>${t("set_console")}</h3>
     ${txt("ps5.host")}
     ${num("ps5.ftp_port", 1)}
-    <div class="f wide"><button class="btn" id="findPs5">${t("find_ps5")}</button></div>
+    <div class="f"><label><b>${t("find_ps5_title")}</b><small>${t("find_ps5_help")}</small></label>
+      <button class="btn" id="findPs5">${t("find_ps5")}</button></div>
     ${tog("ps5.auto_discover")}
     ${txt("ps5.subnet")}
     ${num("ps5.garlic_port", 1)}
@@ -957,7 +961,7 @@ document.addEventListener("click", async e => {
   else if (el.id === "signOut") { await post("/api/logout").catch(() => {}); location.reload(); }
   else if (el.id === "findPs5") {
     el.disabled = true; el.textContent = t("finding_ps5");
-    const r = await act(() => post("/api/discover"));
+    const r = await act(() => post("/api/discover", { host: $id("ps5.host").value, subnet: $id("ps5.subnet").value }));
     if (r) { toast(t("t_found", { host: r.host, port: r.port })); renderSettings(); }
     else { el.disabled = false; el.textContent = t("find_ps5"); }
   }

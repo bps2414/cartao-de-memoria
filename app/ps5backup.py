@@ -30,7 +30,7 @@ from pathlib import Path
 
 from i18n import LANGS, Msg, tr
 
-VERSION = "0.4.0"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
+VERSION = "0.4.1"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
 CONFIG_PATH = Path(os.environ.get("PS5BACKUP_CONFIG", "/config/config.toml"))
 DATA_DIR = Path(os.environ.get("PS5BACKUP_DATA", "/data"))
 SAVES_DIR = DATA_DIR / "saves"
@@ -51,6 +51,7 @@ ART_FILES = ("icon0.png", "pic0.png")
 # Busca do PS5 na rede: portas FTP comuns (ftpsrv, etaHEN, padrão) e o maior bloco varrido (/20 = 4094 IPs).
 FTP_PORTS = (2121, 1337, 21)
 SCAN_MIN_PREFIX = 20
+COMMON_LANS = ("192.168.1.0", "192.168.0.0")  # roteadores domésticos mais comuns
 
 DEFAULTS = {
     "ps5": {"host": "192.168.1.50", "ftp_port": 2121, "garlic_port": 8082,
@@ -523,12 +524,13 @@ def local_ip():
 
 def scan_candidates(cfg):
     """Sub-redes a varrer, em ordem. Dentro do Docker (bridge) o IP local é o da rede interna,
-    por isso o /24 do IP já configurado vem antes dele; `subnet` manda em tudo."""
+    por isso o /24 do IP já configurado vem antes dele, e as faixas comuns de roteador doméstico
+    entram no fim (cobre host vazio ou errado). `subnet` manda em tudo."""
     ps5 = cfg["ps5"]
     if ps5["subnet"]:
         return [ipaddress.ip_network(ps5["subnet"], strict=False)]
     nets = []
-    for ip in (ps5["host"], local_ip()):
+    for ip in (ps5["host"], local_ip(), *COMMON_LANS):
         try:
             net = ipaddress.ip_network(f"{ip}/24", strict=False)
         except ValueError:
@@ -551,9 +553,9 @@ def discover(cfg):
     return None
 
 
-def apply_discovery(cfg):
-    """Procura e grava o que achou no config. Devolve (ip, porta) ou None."""
-    found = discover(cfg)
+def apply_discovery(cfg, search=None):
+    """Procura (com `search` no lugar de `cfg`, se vier) e grava o que achou em `cfg`. Devolve (ip, porta) ou None."""
+    found = discover(search or cfg)
     if found and found != (cfg["ps5"]["host"], cfg["ps5"]["ftp_port"]):
         cfg["ps5"]["host"], cfg["ps5"]["ftp_port"] = found
         save_config(cfg)
@@ -564,6 +566,8 @@ def apply_discovery(cfg):
 # ---------------------------------------------------------------- PS5 (leitura)
 
 def ps5_online(cfg):
+    if not cfg["ps5"]["host"]:  # host vazio conectaria na própria máquina
+        return False
     try:
         socket.create_connection((cfg["ps5"]["host"], cfg["ps5"]["ftp_port"]), timeout=3).close()
         return True
@@ -996,12 +1000,15 @@ def daemon(cfg):
     # Agendamento conta a partir de agora; o que venceu com o daemon parado não é reexecutado.
     last_sched = time.time()
     verifier, next_verify_check, next_discover = None, 0.0, 0.0
+    last_target = (cfg["ps5"]["host"], cfg["ps5"]["ftp_port"])
     while True:
         try:
             cfg = load_config()  # ajustes feitos na interface valem na hora
         except Exception as e:
             log.warning("config.toml inválido (%s); mantendo os ajustes anteriores", e)
         trig = cfg["triggers"]
+        target = (cfg["ps5"]["host"], cfg["ps5"]["ftp_port"])
+        retarget, last_target = target != last_target, target  # IP ou porta mudaram nos ajustes
         now = time.time()
         if now >= next_verify_check and not (verifier and verifier.is_alive()):
             # Conferência de integridade: não depende do PS5 e roda em paralelo à vigia.
@@ -1040,18 +1047,10 @@ def daemon(cfg):
                 session_refresh(cfg)
         else:
             fails += 1
-            if cfg["ps5"]["auto_discover"] and time.time() >= next_discover:
-                # IP ou porta podem ter mudado (DHCP, outro payload): procura e tenta de novo no próximo ciclo.
-                next_discover = time.time() + 300
-                try:
-                    if not apply_discovery(cfg):
-                        log.info("PS5 não encontrado na rede (%s); tento de novo em 5 min. "
-                                 "Em Docker bridge, defina [ps5] subnet", ", ".join(map(str, scan_candidates(cfg))))
-                except Exception as e:
-                    log.warning("busca do PS5 falhou: %s: %s", type(e).__name__, e)
             if STATUS["online"] is None:
                 STATUS["online"] = False
-            if online and fails >= trig["offline_after_failures"]:
+            # Endereço trocado nos ajustes: uma falha basta, não faz sentido esperar a tolerância de queda de rede.
+            if online and (fails >= trig["offline_after_failures"] or retarget):
                 online = STATUS["online"] = False
                 pending.clear()
                 offline_since = time.time()
@@ -1066,6 +1065,15 @@ def daemon(cfg):
                     session_close(cfg, state, ended=offline_since)
                     save_json(STATE_FILE, state)
                 offline_since = None
+            if cfg["ps5"]["auto_discover"] and time.time() >= next_discover:
+                # IP ou porta podem ter mudado (DHCP, outro payload): procura e tenta de novo no próximo ciclo.
+                next_discover = time.time() + 300
+                try:
+                    if not apply_discovery(cfg):
+                        log.info("PS5 não encontrado na rede (%s); tento de novo em 5 min. "
+                                 "Em Docker bridge, defina [ps5] subnet", ", ".join(map(str, scan_candidates(cfg))))
+                except Exception as e:
+                    log.warning("busca do PS5 falhou: %s: %s", type(e).__name__, e)
             if due and not warned_missed:
                 warned_missed = True
                 log.info("agendamento vencido com o PS5 offline; roda quando ele voltar")

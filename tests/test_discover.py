@@ -20,12 +20,24 @@ class Subnet(unittest.TestCase):
     def test_candidates_prefer_configured_host_then_local_network(self):
         with mock.patch.object(core, "local_ip", return_value="172.18.0.2"):
             nets = core.scan_candidates(cfg(host="192.168.0.77"))
-        self.assertEqual([str(n) for n in nets], ["192.168.0.0/24", "172.18.0.0/24"])
+        self.assertEqual([str(n) for n in nets], ["192.168.0.0/24", "172.18.0.0/24", "192.168.1.0/24"])
+
+    def test_common_home_ranges_are_tried_last(self):
+        with mock.patch.object(core, "local_ip", return_value="172.18.0.2"):
+            nets = [str(n) for n in core.scan_candidates(cfg(host=""))]
+        self.assertEqual(nets, ["172.18.0.0/24", "192.168.1.0/24", "192.168.0.0/24"])
 
     def test_explicit_subnet_wins(self):
         with mock.patch.object(core, "local_ip", return_value="172.18.0.2"):
             nets = core.scan_candidates(cfg(subnet="10.1.2.0/23"))
         self.assertEqual(nets, [ipaddress.ip_network("10.1.2.0/23")])
+
+
+class Online(unittest.TestCase):
+    def test_empty_host_is_never_online(self):
+        with mock.patch.object(core.socket, "create_connection") as conn:
+            self.assertFalse(core.ps5_online(cfg(host="")))
+        conn.assert_not_called()
 
 
 class Discover(unittest.TestCase):

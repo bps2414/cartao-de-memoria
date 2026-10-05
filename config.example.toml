@@ -9,7 +9,7 @@ garlic_port = 8082     # Garlic SaveMgr: usado só no atalho de restauração
 # host/ftp_port aqui. Só abre conexões de leitura.
 auto_discover = true
 # Bloco a varrer, ex.: "192.168.1.0/24" (no máximo /20). Vazio = o /24 do host acima,
-# depois o da rede do servidor. Em Docker (bridge) o /24 do host acima é o que vale.
+# o da rede do servidor e as faixas comuns (192.168.1.0/24 e 192.168.0.0/24).
 subnet = ""
 
 [filter]

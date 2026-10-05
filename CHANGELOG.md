@@ -10,6 +10,18 @@ fica em **Alterado** ou **Removido**. A versão atual também está em `VERSION`
 
 ## [Não lançado]
 
+## [0.4.1] - 2026-10-05
+
+### Alterado
+- **Procurar agora** usa o IP e a sub-rede digitados em Ajustes (mesmo sem salvar) e a busca
+  também tenta 192.168.1.0/24 e 192.168.0.0/24, então funciona com o endereço vazio ou errado.
+
+### Corrigido
+- Trocar o IP ou a porta nos ajustes agora marca o PS5 como offline em até uma sondagem
+  (~13 s), em vez de esperar as 3 falhas seguidas (~40 s); a busca automática só roda depois
+  de o status atualizar.
+- `host` vazio não conecta mais na própria máquina (aparecia como "PS5 ligado em .").
+
 ## [0.4.0] - 2026-10-05
 
 ### Adicionado
@@ -71,7 +83,8 @@ Primeira versão.
 - Painel: mapa de uso do console, tempo de jogo estimado, espaço por jogo e projeção
   de 12 meses simulada com as regras reais de retenção.
 
-[Não lançado]: https://github.com/bps2414/memcard/compare/v0.4.0...HEAD
+[Não lançado]: https://github.com/bps2414/memcard/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/bps2414/memcard/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/bps2414/memcard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/bps2414/memcard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/bps2414/memcard/compare/v0.1.0...v0.2.0
