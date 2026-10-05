@@ -1,5 +1,6 @@
 """Conferência de integridade: detectar versão que não bate e avisar só nesse caso."""
 import datetime as dt
+import os
 import shutil
 import time
 
@@ -19,7 +20,8 @@ class Verify(DataDirCase):
         (self.good[1] / "sdimg_slot").write_bytes(b"sAve 2")
         result = core.verify_local()
         self.assertEqual(result["ok"], 2)
-        self.assertEqual(result["bad"], ["1a2b3c4d/PPSA00001/sdimg_slot/20260102-000000/sdimg_slot"])
+        self.assertEqual(result["bad"], [os.path.join("1a2b3c4d", "PPSA00001", "sdimg_slot",
+                                                    "20260102-000000", "sdimg_slot")])
 
     def test_truncated_and_missing_files_are_caught(self):
         (self.good[0] / "sdimg_slot").write_bytes(b"sav")
@@ -27,7 +29,7 @@ class Verify(DataDirCase):
         self.assertEqual(len(core.verify_local()["bad"]), 2)
 
     def test_unreadable_meta_counts_as_bad(self):
-        (self.good[0] / "meta.json").write_text("{")
+        (self.good[0] / "meta.json").write_text("{", encoding="utf-8")
         self.assertEqual(len(core.verify_local()["bad"]), 1)
 
     def test_version_removed_by_cleanup_during_the_check_is_not_reported(self):

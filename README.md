@@ -80,6 +80,23 @@ primeira cópia acontece sozinha em menos de um minuto.
 Os backups ficam na pasta `data/`, ao lado do projeto. Para guardar em outro
 disco, mude `BACKUP_DIR` no `.env`.
 
+### Sem Docker (Windows ou Linux)
+
+Com **Python 3.13**, copie `config.example.toml` para `config.toml` e ajuste o
+IP do console. Defina `PS5BACKUP_CONFIG` com o caminho completo desse arquivo e
+`PS5BACKUP_DATA` com o caminho completo da pasta dos backups. No PowerShell,
+dentro da pasta do projeto:
+
+```powershell
+$env:PS5BACKUP_CONFIG = "$PWD/config.toml"
+$env:PS5BACKUP_DATA = "$PWD/data"
+python -c "import sys; sys.path.insert(0, 'app'); import ps5backup; sys.exit(ps5backup.main())" daemon
+```
+
+No Linux, use `export PS5BACKUP_CONFIG="$PWD/config.toml"` e
+`export PS5BACKUP_DATA="$PWD/data"` antes do mesmo comando. Abra
+`http://localhost:8765`; o terminal precisa ficar aberto enquanto o serviço roda.
+
 ## Idioma
 
 A interface segue o idioma do navegador (português ou inglês) e pode ser trocada

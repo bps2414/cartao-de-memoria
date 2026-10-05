@@ -227,7 +227,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"slots": stats["slots"], "sizes": stats["sizes"]})
         if path == "/api/log":
             try:
-                lines = core.LOG_FILE.read_text(errors="replace").splitlines()[-400:]
+                lines = core.LOG_FILE.read_text(encoding="utf-8", errors="replace").splitlines()[-400:]
             except FileNotFoundError:
                 lines = []
             return self.send_json({"lines": lines})

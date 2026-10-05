@@ -179,7 +179,7 @@ class Prune(DataDirCase):
             self.add_version(dt.datetime(2021, 5, 1, h))
         stray = core.SAVES_DIR / "1a2b3c4d" / "PPSA00001" / "sdimg_slot" / "anotacoes"
         stray.mkdir()
-        (stray / "leia.txt").write_text("não é uma versão")
+        (stray / "leia.txt").write_text("não é uma versão", encoding="utf-8")
         odd = self.add_version("copia-manual")
         core.prune(self.cfg())
         self.assertTrue((stray / "leia.txt").exists())

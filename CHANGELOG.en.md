@@ -10,6 +10,19 @@ release (`0.Y.0`) may change `config.toml` keys; anything that does is listed un
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-05
+
+### Added
+- Runs on Windows from source, with Python 3.13 and without Docker;
+  instructions in both README files.
+- Backup tests against a fake PS5 FTP server and a Windows/Linux test matrix.
+
+### Fixed
+- Locking between threads and processes on Windows, retaining `flock` on Linux.
+- Config, JSON and log files are written and read as UTF-8, preserving names such as "João".
+- Save names are read from SQLite with a valid Windows URI and the database is closed before cleanup.
+- JSON writes retry on Windows when a reader prevents replacing the file.
+
 ## [0.4.1] - 2026-10-05
 
 ### Changed
@@ -83,7 +96,8 @@ First release.
 - Dashboard: console usage map, estimated play time, space per game and a 12-month
   projection simulated with the real retention rules.
 
-[Unreleased]: https://github.com/bps2414/memcard/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/bps2414/memcard/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/bps2414/memcard/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/bps2414/memcard/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/bps2414/memcard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/bps2414/memcard/compare/v0.2.0...v0.3.0

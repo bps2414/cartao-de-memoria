@@ -5,7 +5,7 @@ apagado ou restaurado no console. Sem dependências além da biblioteca padrão.
 """
 import argparse
 import datetime as dt
-import fcntl
+import errno
 import ftplib
 import hashlib
 import io
@@ -25,12 +25,17 @@ import tomllib
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 from i18n import LANGS, Msg, tr
 
-VERSION = "0.4.1"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
+VERSION = "0.4.2"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
 CONFIG_PATH = Path(os.environ.get("PS5BACKUP_CONFIG", "/config/config.toml"))
 DATA_DIR = Path(os.environ.get("PS5BACKUP_DATA", "/data"))
 SAVES_DIR = DATA_DIR / "saves"
@@ -144,13 +149,13 @@ def save_config(cfg):
         lines += [f"{k} = {val(v)}" for k, v in values.items()]
         lines.append("")
     # Escrita no lugar: o arquivo é um bind mount e não pode ser trocado por rename.
-    CONFIG_PATH.write_text("\n".join(lines))
+    CONFIG_PATH.write_text("\n".join(lines), encoding="utf-8")
 
 
 def setup_logging():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S")
-    rotating = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=5 << 20, backupCount=2)
+    rotating = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=5 << 20, backupCount=2, encoding="utf-8")
     for handler in (logging.StreamHandler(sys.stdout), rotating):
         handler.setFormatter(fmt)
         log.addHandler(handler)
@@ -161,22 +166,46 @@ def setup_logging():
 def locked():
     """Impede que duas rodadas (daemon, web, linha de comando) rodem juntas."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with open(DATA_DIR / ".lock", "w") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
-        yield
+    if os.name == "nt":
+        with open(DATA_DIR / ".lock", "a+b") as f:
+            f.seek(0)
+            while True:
+                try:
+                    msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError as e:
+                    if e.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                        raise
+                    time.sleep(0.05)
+            try:
+                yield
+            finally:
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        with open(DATA_DIR / ".lock", "w", encoding="utf-8") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            yield
 
 
 def load_json(path, default):
     try:
-        return json.loads(Path(path).read_text())
+        return json.loads(Path(path).read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         return default
 
 
 def save_json(path, data):
     tmp = Path(str(path) + ".tmp")
-    tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
-    tmp.replace(path)
+    tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding="utf-8")
+    for attempt in range(5):
+        try:
+            tmp.replace(path)
+            return
+        except PermissionError:
+            if os.name != "nt" or attempt == 4:
+                raise
+            time.sleep(0.05)
 
 
 def load_state():
@@ -665,18 +694,18 @@ def refresh_save_meta(ftp, state, uid, kind):
         raw = ftp_bytes(ftp, f"/system_data/{kind}/{uid}/db/user/savedata.db")
     except ftplib.all_errors:
         return
-    tmp = TMP_DIR / "savedata.db"
+    tmp = (TMP_DIR / "savedata.db").resolve()
     tmp.write_bytes(raw)
     try:
-        db = sqlite3.connect(f"file:{tmp}?mode=ro", uri=True)
-        for title, dirname, main, sub, detail in db.execute(
-                "SELECT title_id, dir_name, main_title, sub_title, detail FROM savedata"):
-            state["savemeta"][f"{uid}/{title}/{dirname}"] = {
-                "label": main or "", "sub": sub or "", "detail": detail or ""}
-        db.close()
+        with closing(sqlite3.connect(tmp.as_uri() + "?mode=ro", uri=True)) as db:
+            for title, dirname, main, sub, detail in db.execute(
+                    "SELECT title_id, dir_name, main_title, sub_title, detail FROM savedata"):
+                state["savemeta"][f"{uid}/{title}/{dirname}"] = {
+                    "label": main or "", "sub": sub or "", "detail": detail or ""}
     except sqlite3.Error as e:
         log.info("banco de saves de %s ilegível (%s); sigo sem os nomes", uid, e)
-    tmp.unlink(missing_ok=True)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def refresh_title_meta(ftp, state, title):

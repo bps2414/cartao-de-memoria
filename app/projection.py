@@ -24,7 +24,7 @@ def observed_activity(now):
     first = now.date()
     raw_bytes = copies = 0
     try:
-        lines = core.LOG_FILE.read_text(errors="replace").splitlines()
+        lines = core.LOG_FILE.read_text(encoding="utf-8", errors="replace").splitlines()
     except FileNotFoundError:
         lines = []
     oldest = now.date() - dt.timedelta(days=WINDOW_DAYS - 1)

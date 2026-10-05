@@ -21,7 +21,7 @@ class Simulate(DataDirCase):
 
     def log_copies(self, whens, save=SAVE, size=SIZE):
         """Linhas no formato que o backup grava de verdade no backup.log."""
-        with open(core.LOG_FILE, "a") as f:
+        with open(core.LOG_FILE, "a", encoding="utf-8") as f:
             f.write("2026-06-01 00:00:00 INFO daemon iniciado\n")
             for when in whens:
                 f.write(f"{when:%Y-%m-%d %H:%M:%S} INFO NOVA VERSÃO {save[0]}/{save[1]}/{save[2]} "
@@ -94,9 +94,9 @@ class Simulate(DataDirCase):
 
     def test_window_shrinks_to_days_with_log(self):
         self.log_copies(self.daily(2, (20, 0)))
-        with open(core.LOG_FILE) as f:
+        with open(core.LOG_FILE, encoding="utf-8") as f:
             lines = [line for line in f if "daemon iniciado" not in line]
-        core.LOG_FILE.write_text("".join(lines))
+        core.LOG_FILE.write_text("".join(lines), encoding="utf-8")
         out = projection.simulate(self.cfg(thin_old_versions=False, min_gap_minutes=0), NOW)
         self.assertEqual(out["window_days"], 2)
         self.assertEqual(out["projected"]["30"], 30 * UNSEEN)

@@ -10,6 +10,19 @@ fica em **Alterado** ou **Removido**. A versão atual também está em `VERSION`
 
 ## [Não lançado]
 
+## [0.4.2] - 2026-10-05
+
+### Adicionado
+- Roda no Windows a partir do código-fonte, com Python 3.13 e sem Docker;
+  instruções nos dois README.
+- Testes de backup contra um FTP de PS5 de mentira e matriz de testes no Windows e no Linux.
+
+### Corrigido
+- Travamento entre threads e processos no Windows, mantendo `flock` no Linux.
+- Config, JSON e log gravados e lidos em UTF-8, preservando nomes como "João".
+- Nomes de saves lidos do SQLite com URI válida no Windows e banco fechado antes da limpeza.
+- Gravação de JSON tenta novamente no Windows se uma leitura impedir a troca do arquivo.
+
 ## [0.4.1] - 2026-10-05
 
 ### Alterado
@@ -83,7 +96,8 @@ Primeira versão.
 - Painel: mapa de uso do console, tempo de jogo estimado, espaço por jogo e projeção
   de 12 meses simulada com as regras reais de retenção.
 
-[Não lançado]: https://github.com/bps2414/memcard/compare/v0.4.1...HEAD
+[Não lançado]: https://github.com/bps2414/memcard/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/bps2414/memcard/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/bps2414/memcard/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/bps2414/memcard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/bps2414/memcard/compare/v0.2.0...v0.3.0

@@ -38,7 +38,7 @@ class DataDirCase(unittest.TestCase):
             patcher = mock.patch.object(core, name, value)
             patcher.start()
             self.addCleanup(patcher.stop)
-        # Nenhum teste fala com a rede: qualquer envio de aviso vira uma chamada registrada.
+        # Avisos não saem pela rede: qualquer envio vira uma chamada registrada.
         patcher = mock.patch.object(core, "send_embed", mock.Mock(return_value=None))
         self.sent = patcher.start()
         self.addCleanup(patcher.stop)
@@ -55,7 +55,7 @@ class DataDirCase(unittest.TestCase):
         (vdir / fname).write_bytes(data)
         (vdir / "meta.json").write_text(json.dumps({
             "uid": uid, "title_id": title, "file": fname, "size": len(data),
-            "sha256": core.hashlib.sha256(data).hexdigest(), "remote_mtime_utc": "20260101000000"}))
+            "sha256": core.hashlib.sha256(data).hexdigest(), "remote_mtime_utc": "20260101000000"}), encoding="utf-8")
         if pinned:
             (vdir / core.PIN_NAME).touch()
         return vdir

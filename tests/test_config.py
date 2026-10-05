@@ -80,7 +80,7 @@ class KeysEverywhere(unittest.TestCase):
             self.assertEqual(set(example.get(section, {})), set(defaults), f"[{section}] no config.example.toml")
 
     def test_every_key_has_a_field_in_settings(self):
-        html = (ROOT / "app" / "ui" / "index.html").read_text()
+        html = (ROOT / "app" / "ui" / "index.html").read_text(encoding="utf-8")
         on_cards = {"filter.include_profiles", "filter.exclude_profiles",  # interruptor de cada cartão
                     "filter.include_titles", "filter.exclude_titles"}      # interruptor de cada jogo
         for section, defaults in core.DEFAULTS.items():
