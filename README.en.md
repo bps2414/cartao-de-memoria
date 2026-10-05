@@ -44,7 +44,10 @@ cp config.example.toml config.toml
 cp .env.example .env
 ```
 
-Open `config.toml` and replace `host` with your PS5's IP. Then:
+Open `config.toml` and replace `host` with your PS5's IP. If it is wrong or the IP
+changes, Memcard finds the PS5 on its own (IP and FTP port) and fixes the file;
+Settings has a **Find now** button. The scan covers the /24 of the configured
+`host`; for another network, set `subnet` (e.g. `"192.168.0.0/24"`). Then:
 
 ```sh
 docker compose up -d

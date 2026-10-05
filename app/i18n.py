@@ -56,6 +56,7 @@ TEXT = {
         "e_unknown_route": "rota desconhecida",
         "e_busy": "Já existe uma cópia em andamento.",
         "e_offline": "O PS5 não está respondendo. Ligue o console e carregue o ftpsrv.",
+        "e_discover": "Não achei o PS5 na rede. Ligue o console, carregue o ftpsrv e confira a sub-rede.",
         "e_profile": "perfil ou modo inválido",
         "e_title": "jogo inválido",
         "e_url": "A URL precisa começar com https://",
@@ -75,6 +76,7 @@ TEXT = {
         "c_new_profiles": '[filter] new_profiles: use "include" ou "exclude"',
         "c_hhmm": "[triggers] schedule_daily_at: horário inválido {value} (use HH:MM)",
         "c_language": '[notify] language: use "pt-BR" ou "en"',
+        "c_subnet": '[ps5] subnet: use um bloco como "192.168.1.0/24" (no máximo /20)',
     },
     "en": {
         "off_title": "🔴  PS5 off · session ended",
@@ -121,6 +123,7 @@ TEXT = {
         "e_unknown_route": "unknown route",
         "e_busy": "A backup is already running.",
         "e_offline": "The PS5 is not responding. Turn the console on and load ftpsrv.",
+        "e_discover": "Could not find the PS5 on the network. Turn it on, load ftpsrv and check the subnet.",
         "e_profile": "invalid profile or mode",
         "e_title": "invalid game",
         "e_url": "The URL must start with https://",
@@ -139,6 +142,7 @@ TEXT = {
         "c_new_profiles": '[filter] new_profiles: use "include" or "exclude"',
         "c_hhmm": "[triggers] schedule_daily_at: invalid time {value} (use HH:MM)",
         "c_language": '[notify] language: use "pt-BR" or "en"',
+        "c_subnet": '[ps5] subnet: use a block like "192.168.1.0/24" (/20 at most)',
     },
 }
 

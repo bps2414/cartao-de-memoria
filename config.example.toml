@@ -5,6 +5,12 @@
 host = "192.168.1.50"   # IP do seu PS5 na rede local
 ftp_port = 2121        # ftpsrv (ps5-payload-dev): é por aqui que os saves são lidos
 garlic_port = 8082     # Garlic SaveMgr: usado só no atalho de restauração
+# Se o PS5 não responde, procura IP e porta do FTP na rede (a cada 5 min) e atualiza
+# host/ftp_port aqui. Só abre conexões de leitura.
+auto_discover = true
+# Bloco a varrer, ex.: "192.168.1.0/24" (no máximo /20). Vazio = o /24 do host acima,
+# depois o da rede do servidor. Em Docker (bridge) o /24 do host acima é o que vale.
+subnet = ""
 
 [filter]
 # Perfil sem decisão explícita segue esta regra: "include" ou "exclude".

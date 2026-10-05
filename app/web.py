@@ -1,7 +1,8 @@
 """Interface web: painel, ajustes e download das versões guardadas.
 
 Só lê e escreve no servidor (config.toml e pasta de backup). Nenhuma rota fala
-com o PS5 além de disparar a mesma rodada de backup somente-leitura do daemon.
+com o PS5 além de disparar a mesma rodada de backup somente-leitura do daemon
+e de procurar o console na rede (conexões de leitura, sem gravar nada).
 Pensada para a rede local; não exponha na internet. Com WEB_PASSWORD definida
 (no .env), tudo exige login: páginas, API, artes e downloads.
 """
@@ -270,6 +271,11 @@ class Handler(BaseHTTPRequestHandler):
                 raise Msg("e_offline")
             threading.Thread(target=core.safe_run, args=(cfg, "manual"), daemon=True).start()
             return {"ok": True}
+        if path == "/api/discover":
+            found = core.apply_discovery(cfg)
+            if not found:
+                raise Msg("e_discover")
+            return {"host": found[0], "port": found[1]}
         if path == "/api/config":
             core.save_config(body)
             return {"ok": True}

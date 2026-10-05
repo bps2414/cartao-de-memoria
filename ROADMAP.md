@@ -20,6 +20,7 @@ qualquer coisa que escreva no console entra desligada por padrão.
 - Janela do "jogando agora" configurável.
 - Senha opcional na interface (`WEB_PASSWORD`), cobrindo API e downloads.
 - Resumo semanal no Discord: tempo de jogo por jogo e perfil, e espaço.
+- Busca automática do PS5: IP e porta do FTP, quando o console não responde ou pelo botão em Ajustes.
 - Imagem pronta no GitHub Container Registry, publicada a cada push na `main`.
 
 ## Próximo

@@ -43,7 +43,10 @@ cp config.example.toml config.toml
 cp .env.example .env
 ```
 
-Abra o `config.toml` e troque `host` pelo IP do seu PS5. Depois:
+Abra o `config.toml` e troque `host` pelo IP do seu PS5. Se errar ou o IP mudar, o
+Memcard procura o PS5 sozinho na rede (IP e porta do FTP) e corrige o arquivo; em
+Ajustes há o botão **Procurar agora**. A busca varre o /24 do `host` configurado;
+para outra rede, defina `subnet` (ex.: `"192.168.0.0/24"`). Depois:
 
 ```sh
 docker compose up -d
@@ -242,6 +245,7 @@ docker compose exec ps5-backup ps5backup prune             # aplicar a limpeza a
 
 | Sintoma | O que verificar |
 |---|---|
+| PS5 não é encontrado sozinho | A busca só vê o bloco `subnet` (ou o /24 do `host`). Ajuste `subnet` ao da sua rede e confira `docker compose logs`. |
 | "PS5 desligado" com o console ligado | O desbloqueio foi rodado depois de ligar? O ftpsrv está carregado? Teste `nc -vz <ip-do-ps5> 2121`. |
 | Nenhum perfil aparece | Confira o IP em Ajustes › Console e toque em Copiar agora. |
 | Jogo aparece só com o ID | O console não tem os metadados dele (comum em jogos de PS4). O backup funciona igual. |

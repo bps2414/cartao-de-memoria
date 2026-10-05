@@ -346,6 +346,9 @@ const I18N = {
     "s_notify.weekly_summary": "Mandar um resumo da semana", "s_notify.weekly_summary_h": "Toda segunda de manhã: tempo de jogo por jogo e perfil, e o espaço ocupado. Semana sem jogo não gera mensagem.",
     set_console: "Console",
     "s_ps5.host": "Endereço do PS5",
+    "s_ps5.auto_discover": "Procurar o PS5 sozinho", "s_ps5.auto_discover_h": "Se o PS5 não responde, busca o IP e a porta do FTP na rede e atualiza aqui.",
+    "s_ps5.subnet": "Sub-rede a varrer", "s_ps5.subnet_h": "Ex.: 192.168.1.0/24. Vazio = a rede do endereço acima.",
+    find_ps5: "Procurar agora", finding_ps5: "Procurando…", t_found: "PS5 encontrado em {host}:{port}.",
     "s_ps5.ftp_port": "Porta do ftpsrv", "s_ps5.ftp_port_h": "É por aqui que os saves são lidos.",
     "s_ps5.garlic_port": "Porta do Garlic SaveMgr", "s_ps5.garlic_port_h": "Usada só no atalho de restauração.",
     "s_triggers.probe_interval_seconds": "Checar se o PS5 está ligado a cada (segundos)",
@@ -461,6 +464,9 @@ const I18N = {
     "s_notify.weekly_summary": "Send a weekly summary", "s_notify.weekly_summary_h": "Every Monday morning: play time by game and profile, and storage used. A week with no play sends nothing.",
     set_console: "Console",
     "s_ps5.host": "PS5 address",
+    "s_ps5.auto_discover": "Find the PS5 automatically", "s_ps5.auto_discover_h": "If the PS5 stops responding, look for its IP and FTP port on the network and update them here.",
+    "s_ps5.subnet": "Subnet to scan", "s_ps5.subnet_h": "E.g. 192.168.1.0/24. Empty = the network of the address above.",
+    find_ps5: "Find now", finding_ps5: "Searching…", t_found: "PS5 found at {host}:{port}.",
     "s_ps5.ftp_port": "ftpsrv port", "s_ps5.ftp_port_h": "This is where the saves are read from.",
     "s_ps5.garlic_port": "Garlic SaveMgr port", "s_ps5.garlic_port_h": "Only used for the restore shortcut.",
     "s_triggers.probe_interval_seconds": "Check whether the PS5 is on every (seconds)",
@@ -765,6 +771,9 @@ function renderSettings() {
   <div class="panel"><h3>${t("set_console")}</h3>
     ${txt("ps5.host")}
     ${num("ps5.ftp_port", 1)}
+    <div class="f wide"><button class="btn" id="findPs5">${t("find_ps5")}</button></div>
+    ${tog("ps5.auto_discover")}
+    ${txt("ps5.subnet")}
     ${num("ps5.garlic_port", 1)}
     ${num("triggers.probe_interval_seconds", 5)}
     ${num("triggers.offline_after_failures", 1)}
@@ -946,6 +955,12 @@ document.addEventListener("click", async e => {
   else if (el.id === "saveCfg") { const ok = await act(() => post("/api/config", collectConfig()), t("t_saved")); if (ok) renderSettings(); }
   else if (el.id === "hookSave") { const ok = await act(() => post("/api/webhook", { url: $("#hook").value }), t("t_hook")); if (ok) renderSettings(); }
   else if (el.id === "signOut") { await post("/api/logout").catch(() => {}); location.reload(); }
+  else if (el.id === "findPs5") {
+    el.disabled = true; el.textContent = t("finding_ps5");
+    const r = await act(() => post("/api/discover"));
+    if (r) { toast(t("t_found", { host: r.host, port: r.port })); renderSettings(); }
+    else { el.disabled = false; el.textContent = t("find_ps5"); }
+  }
   else if (el.id === "hookTest") act(() => post("/api/webhook/test"), t("t_test"));
   else if (el.id === "verify") {
     verifying = true; $("#verifyOut").textContent = t("verifying");

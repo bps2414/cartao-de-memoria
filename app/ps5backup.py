@@ -9,6 +9,7 @@ import fcntl
 import ftplib
 import hashlib
 import io
+import ipaddress
 import json
 import logging
 import logging.handlers
@@ -23,6 +24,7 @@ import time
 import tomllib
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -45,9 +47,13 @@ SAVE_KINDS = ("savedata_prospero", "savedata")
 UID_RE = re.compile(r"[0-9a-f]{8}")
 TITLE_RE = re.compile(r"[A-Z]{4}\d{5}")
 ART_FILES = ("icon0.png", "pic0.png")
+# Busca do PS5 na rede: portas FTP comuns (ftpsrv, etaHEN, padrão) e o maior bloco varrido (/20 = 4094 IPs).
+FTP_PORTS = (2121, 1337, 21)
+SCAN_MIN_PREFIX = 20
 
 DEFAULTS = {
-    "ps5": {"host": "192.168.1.50", "ftp_port": 2121, "garlic_port": 8082},
+    "ps5": {"host": "192.168.1.50", "ftp_port": 2121, "garlic_port": 8082,
+            "auto_discover": True, "subnet": ""},
     "filter": {"new_profiles": "include", "include_profiles": [], "exclude_profiles": [],
                "include_titles": [], "exclude_titles": []},
     "triggers": {"on_power_on": True, "power_on_delay_seconds": 20,
@@ -99,9 +105,18 @@ def validate_config(user):
     for hhmm in cfg["triggers"]["schedule_daily_at"]:
         if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", hhmm):
             raise Msg("c_hhmm", value=repr(hhmm))
+    if cfg["ps5"]["subnet"] and not valid_subnet(cfg["ps5"]["subnet"]):
+        raise Msg("c_subnet")
     if cfg["notify"]["language"] not in LANGS:
         raise Msg("c_language")
     return cfg
+
+
+def valid_subnet(text):
+    try:
+        return ipaddress.ip_network(text, strict=False).prefixlen >= SCAN_MIN_PREFIX
+    except ValueError:
+        return False
 
 
 def load_config():
@@ -472,6 +487,77 @@ def weekly_summary(cfg):
     if embed:
         send_embed(embed)
         log.info("resumo semanal enviado (semana de %s)", start)
+
+
+# ------------------------------------------------------- busca do PS5 na rede
+
+def is_ps5_ftp(host, port):
+    """FTP anônimo que enxerga /user/home: só um PS5 com ftpsrv responde isso. Só leitura."""
+    try:
+        with ftplib.FTP() as ftp:
+            ftp.connect(host, port, timeout=3)
+            ftp.login()
+            ftp.cwd("/user/home")
+        return True
+    except (OSError, ftplib.Error):
+        return False
+
+
+def port_open(host, port):
+    try:
+        socket.create_connection((host, port), timeout=0.6).close()
+        return True
+    except OSError:
+        return False
+
+
+def local_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("10.255.255.255", 1))  # UDP não envia nada: só escolhe a interface de saída
+            return s.getsockname()[0]
+    except OSError:
+        return None
+
+
+def scan_candidates(cfg):
+    """Sub-redes a varrer, em ordem. Dentro do Docker (bridge) o IP local é o da rede interna,
+    por isso o /24 do IP já configurado vem antes dele; `subnet` manda em tudo."""
+    ps5 = cfg["ps5"]
+    if ps5["subnet"]:
+        return [ipaddress.ip_network(ps5["subnet"], strict=False)]
+    nets = []
+    for ip in (ps5["host"], local_ip()):
+        try:
+            net = ipaddress.ip_network(f"{ip}/24", strict=False)
+        except ValueError:
+            continue
+        if net not in nets:
+            nets.append(net)
+    return nets
+
+
+def discover(cfg):
+    """Procura o PS5 na rede e devolve (ip, porta), ou None. A porta já configurada é testada primeiro."""
+    ports = list(dict.fromkeys((cfg["ps5"]["ftp_port"], *FTP_PORTS)))
+    for net in scan_candidates(cfg):
+        pairs = [(str(h), p) for h in net.hosts() for p in ports]
+        with ThreadPoolExecutor(128) as pool:
+            opened = [pair for pair, ok in zip(pairs, pool.map(lambda hp: port_open(*hp), pairs)) if ok]
+            for pair, ok in zip(opened, pool.map(lambda hp: is_ps5_ftp(*hp), opened)):
+                if ok:
+                    return pair
+    return None
+
+
+def apply_discovery(cfg):
+    """Procura e grava o que achou no config. Devolve (ip, porta) ou None."""
+    found = discover(cfg)
+    if found and found != (cfg["ps5"]["host"], cfg["ps5"]["ftp_port"]):
+        cfg["ps5"]["host"], cfg["ps5"]["ftp_port"] = found
+        save_config(cfg)
+        log.info("PS5 encontrado na rede: %s (ftp %d); config.toml atualizado", *found)
+    return found
 
 
 # ---------------------------------------------------------------- PS5 (leitura)
@@ -908,7 +994,7 @@ def daemon(cfg):
     offline_since = None  # sessão ainda aberta, esperando para saber se foi só uma queda rápida
     # Agendamento conta a partir de agora; o que venceu com o daemon parado não é reexecutado.
     last_sched = time.time()
-    verifier, next_verify_check = None, 0.0
+    verifier, next_verify_check, next_discover = None, 0.0, 0.0
     while True:
         try:
             cfg = load_config()  # ajustes feitos na interface valem na hora
@@ -953,6 +1039,15 @@ def daemon(cfg):
                 session_refresh(cfg)
         else:
             fails += 1
+            if cfg["ps5"]["auto_discover"] and time.time() >= next_discover:
+                # IP ou porta podem ter mudado (DHCP, outro payload): procura e tenta de novo no próximo ciclo.
+                next_discover = time.time() + 300
+                try:
+                    if not apply_discovery(cfg):
+                        log.info("PS5 não encontrado na rede (%s); tento de novo em 5 min. "
+                                 "Em Docker bridge, defina [ps5] subnet", ", ".join(map(str, scan_candidates(cfg))))
+                except Exception as e:
+                    log.warning("busca do PS5 falhou: %s: %s", type(e).__name__, e)
             if STATUS["online"] is None:
                 STATUS["online"] = False
             if online and fails >= trig["offline_after_failures"]:
@@ -1103,12 +1198,19 @@ def cmd_status(cfg):
     return 0
 
 
+def cmd_discover(cfg):
+    found = apply_discovery(cfg)
+    print(f"PS5 em {found[0]} (ftp {found[1]})" if found else "PS5 não encontrado na rede")
+    return 0 if found else 1
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("daemon", help="vigia o PS5, dispara backups e serve a interface web")
     sub.add_parser("backup", help="roda um backup agora (disparo manual)")
     sub.add_parser("status", help="estado do PS5 e do último backup")
+    sub.add_parser("discover", help="procura o PS5 na rede (IP e porta) e grava no config")
     sub.add_parser("list", help="lista saves guardados e o caminho da versão mais nova")
     verify = sub.add_parser("verify", help="confere o checksum de todas as versões")
     verify.add_argument("--remote", action="store_true", help="também compara com o PS5 ao vivo")
@@ -1124,6 +1226,8 @@ def main():
         return 0 if safe_run(cfg, "manual") else 1
     elif args.cmd == "status":
         return cmd_status(cfg)
+    elif args.cmd == "discover":
+        return cmd_discover(cfg)
     elif args.cmd == "list":
         return cmd_list()
     elif args.cmd == "verify":
