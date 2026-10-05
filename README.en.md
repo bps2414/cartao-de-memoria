@@ -54,8 +54,9 @@ docker compose up -d
 ```
 
 This pulls the ready-made image from `ghcr.io/bps2414/memcard` (amd64 and
-arm64), published on every change to `main`. To update later:
-`docker compose pull && docker compose up -d`. If you would rather build from
+arm64), published on every change to `main`. `compose.yml` already includes **Watchtower**, which checks every 15 min for a new
+image and updates on its own (for manual updates, remove that service and run
+`docker compose pull && docker compose up -d`). If you would rather build from
 the code in this folder, use `docker compose up -d --build`.
 
 Open `http://<computer-ip>:8765`. With the PS5 on and ftpsrv loaded, the first

@@ -6,6 +6,9 @@ services:
     build: .
     container_name: ps5-backup
     restart: unless-stopped
+    labels:
+      # O Watchtower (abaixo) só atualiza containers com este rótulo.
+      - com.centurylinklabs.watchtower.enable=true
     user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       TZ: ${TZ:-America/Sao_Paulo}
@@ -18,3 +21,20 @@ services:
       # Gravável: a interface web salva os ajustes neste arquivo.
       - ./config.toml:/config/config.toml
       - ${BACKUP_DIR:-./data}:/data
+
+  # Atualização automática: a cada 15 min confere se há imagem nova na main
+  # (ghcr.io/bps2414/memcard:latest), baixa e recria o ps5-backup. Os dados ficam
+  # nos volumes e não se perdem. Não use com `--build` (ele trocaria o seu código
+  # local pela imagem do registro). Para desligar: remova este serviço.
+  # Atenção: o docker.sock dá controle total do Docker neste servidor.
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: ps5-backup-updater
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_POLL_INTERVAL: "900"
+      WATCHTOWER_CLEANUP: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
