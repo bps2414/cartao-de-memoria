@@ -100,6 +100,12 @@ class KeysEverywhere(unittest.TestCase):
             self.assertEqual(core.load_config(), cfg)
 
 
+class Changelog(unittest.TestCase):
+    def test_top_release_matches_version(self):
+        text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertEqual(re.search(r"^## \[(\d+\.\d+\.\d+)\]", text, re.M).group(1), core.VERSION)
+
+
 class Dictionary(unittest.TestCase):
     def test_languages_have_the_same_keys_and_placeholders(self):
         base = TEXT["pt-BR"]

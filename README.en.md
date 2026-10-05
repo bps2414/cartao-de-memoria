@@ -246,6 +246,12 @@ docker compose exec ps5-backup ps5backup prune             # apply cleanup now
   to any device on the network. This project only uses the read commands
   (`CWD`, `MLSD`, `RETR`).
 
+## Versions
+
+Changes are listed in [CHANGELOG.md](CHANGELOG.md) (in Portuguese) and on the
+[Releases](https://github.com/bps2414/memcard/releases) page. Semantic versioning.
+`ps5backup --version` prints the installed one.
+
 ## Common problems
 
 | Symptom | What to check |

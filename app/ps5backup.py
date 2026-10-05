@@ -30,6 +30,7 @@ from pathlib import Path
 
 from i18n import LANGS, Msg, tr
 
+VERSION = "0.4.0"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
 CONFIG_PATH = Path(os.environ.get("PS5BACKUP_CONFIG", "/config/config.toml"))
 DATA_DIR = Path(os.environ.get("PS5BACKUP_DATA", "/data"))
 SAVES_DIR = DATA_DIR / "saves"
@@ -248,7 +249,7 @@ def is_discord(url):
 
 def _http(method, url, body, content_type):
     req = urllib.request.Request(url, data=body, method=method,
-                                 headers={"Content-Type": content_type, "User-Agent": "ps5backup/1.0"})
+                                 headers={"Content-Type": content_type, "User-Agent": f"ps5backup/{VERSION}"})
     with urllib.request.urlopen(req, timeout=10) as r:
         return r.read()
 
@@ -989,7 +990,7 @@ def schedule_due(cfg, last_ts, now_ts):
 
 
 def daemon(cfg):
-    log.info("daemon iniciado; PS5 %s (ftp %d)", cfg["ps5"]["host"], cfg["ps5"]["ftp_port"])
+    log.info("daemon iniciado (v%s); PS5 %s (ftp %d)", VERSION, cfg["ps5"]["host"], cfg["ps5"]["ftp_port"])
     online, fails, next_watch, pending, warned_missed = False, 0, 0.0, {}, False
     offline_since = None  # sessão ainda aberta, esperando para saber se foi só uma queda rápida
     # Agendamento conta a partir de agora; o que venceu com o daemon parado não é reexecutado.
@@ -1206,6 +1207,7 @@ def cmd_discover(cfg):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--version", action="version", version=f"ps5backup {VERSION}")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("daemon", help="vigia o PS5, dispara backups e serve a interface web")
     sub.add_parser("backup", help="roda um backup agora (disparo manual)")
