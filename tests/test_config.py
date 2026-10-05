@@ -101,9 +101,10 @@ class KeysEverywhere(unittest.TestCase):
 
 
 class Changelog(unittest.TestCase):
-    def test_top_release_matches_version(self):
-        text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-        self.assertEqual(re.search(r"^## \[(\d+\.\d+\.\d+)\]", text, re.M).group(1), core.VERSION)
+    def test_top_release_matches_version_in_every_language(self):
+        for name in ("CHANGELOG.md", "CHANGELOG.en.md"):
+            text = (ROOT / name).read_text(encoding="utf-8")
+            self.assertEqual(re.search(r"^## \[(\d+\.\d+\.\d+)\]", text, re.M).group(1), core.VERSION, name)
 
 
 class Dictionary(unittest.TestCase):

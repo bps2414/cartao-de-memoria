@@ -1,5 +1,7 @@
 # Changelog
 
+**Português** · [English](CHANGELOG.en.md)
+
 Segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 [Versionamento Semântico](https://semver.org/lang/pt-BR/). Enquanto a versão for
 `0.x`, uma versão menor (`0.Y.0`) pode mudar chaves do `config.toml`; o que mudar
