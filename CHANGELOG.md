@@ -15,7 +15,7 @@ fica em **Alterado** ou **Removido**. A versão atual também está em `VERSION`
 ### Adicionado
 - Assistente de primeiro acesso na interface: encontra o PS5 (com campos de IP e sub-rede
   e orientação quando a busca falha), faz a primeira cópia e configura os avisos do Discord.
-  Aparece só enquanto não há dados; pode ser pulado em qualquer passo.
+  Aparece uma vez, também em instalações que já têm backups; pode ser pulado em qualquer passo.
 - `POST /api/setup` e o campo `setup` em `/api/overview`, que dizem se o assistente deve aparecer.
 - Botão "Copiar diagnóstico" na aba Registro e no assistente, quando o PS5 não é encontrado.
 

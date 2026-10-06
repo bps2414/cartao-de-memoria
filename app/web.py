@@ -103,7 +103,7 @@ def overview():
                    "over_limit": bool(cfg["retention"]["warn_total_gb"])
                    and total_bytes > cfg["retention"]["warn_total_gb"] * 1024 ** 3},
         "profiles": profiles, "titles": titles, "config": cfg,
-        "setup": "setup_done" not in state["meta"] and not state["profiles"] and not total_versions,
+        "setup": "setup_done" not in state["meta"],  # instalação antiga também vê o assistente uma vez
         "webhook": {"set": bool(url), "discord": core.is_discord(url)},
         "session_open": bool(state["session"]), "auth": bool(password()),
         "verify": {"at": state["meta"].get("last_verify"), "ok": state["meta"].get("last_verify_ok", 0),

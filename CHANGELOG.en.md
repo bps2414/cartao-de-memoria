@@ -15,7 +15,7 @@ release (`0.Y.0`) may change `config.toml` keys; anything that does is listed un
 ### Added
 - First-run wizard in the web interface: finds the PS5 (with IP and subnet fields and
   guidance when the search fails), runs the first backup and sets up Discord notifications.
-  Shown only while there is no data; it can be skipped at any step.
+  Shown once, including on installations that already have backups; it can be skipped at any step.
 - `POST /api/setup` and the `setup` field in `/api/overview`, which tell whether the wizard should show.
 - "Copy diagnostics" button in the Log tab and in the wizard, when the PS5 is not found.
 

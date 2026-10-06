@@ -97,15 +97,13 @@ class Setup(WebCase):
         self.assertEqual(status, 200)
         self.assertIs(json.loads(body)["setup"], True)
 
-    def test_known_profile_does_not_need_setup(self):
+    def test_existing_installation_sees_setup_once(self):
         state = core.load_state()
         state["profiles"]["1a2b3c4d"] = ""
         core.save_json(core.STATE_FILE, state)
-        self.assertIs(json.loads(self.call("/api/overview")[1])["setup"], False)
-
-    def test_stored_version_without_profile_does_not_need_setup(self):
         self.add_version(WHEN)
-        self.assertFalse(core.load_state()["profiles"])
+        self.assertIs(json.loads(self.call("/api/overview")[1])["setup"], True)
+        self.call("/api/setup", {"done": True})
         self.assertIs(json.loads(self.call("/api/overview")[1])["setup"], False)
 
     def test_completion_is_persisted_and_hides_setup(self):
