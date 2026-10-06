@@ -150,7 +150,36 @@ details.save .ver { padding-left: 14px; border-bottom: 0; border-top: 1px solid 
 .chip { padding: 2px 7px; border-radius: 6px; background: var(--well); color: var(--mute); font: 400 10px var(--mono); vertical-align: 2px; }
 .note { margin-top: 22px; padding: 14px 16px; border-radius: 12px; background: var(--well); color: var(--mute); font-size: 13.5px; }
 .note a { color: var(--slot); }
-.note ol { margin: 8px 0 0; padding-left: 20px; }
+.note ol, .note ul { margin: 8px 0 0; padding-left: 20px; }
+
+/* ---------- primeiro acesso ---------- */
+body.setup .tabs, body.setup #go, body.setup .state, body.setup main { display: none; }
+.wiz { max-width: 640px; margin: 8px auto 0; padding: 20px 22px; border: 1px solid var(--line); border-radius: 18px;
+  background: linear-gradient(160deg, var(--shell-hi), var(--shell) 55%);
+  clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 34px, 100% 100%, 0 100%); }
+.wiz-steps { display: flex; flex-wrap: wrap; gap: 8px 18px; list-style: none; margin: 0 0 22px; padding: 0 30px 16px 0;
+  border-bottom: 1px solid var(--line); color: var(--mute); font: 600 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; }
+.wiz-steps li { display: flex; align-items: center; gap: 8px; }
+.wiz-steps b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--well); }
+.wiz-steps [aria-current] { color: var(--text); }
+.wiz-steps [aria-current] b { background: var(--slot); color: #2a1e00; }
+.wiz-steps .done b { background: var(--ok); color: #0d2b1c; }
+.wiz h2 { margin: 0 0 10px; padding-left: 12px; border-left: 4px solid var(--slot); font: 700 26px/1.1 var(--display); outline: 0; }
+.wiz p { margin: 0 0 14px; color: var(--mute); }
+.wiz p.wiz-out { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 12px; background: var(--well); color: var(--text); }
+.wiz p.wiz-err { color: var(--bad); }
+.wiz-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; margin-top: 18px; }
+.wiz-fields.one { grid-template-columns: 1fr; }
+.wiz label b { font-weight: 500; display: block; }
+.wiz label small { color: var(--mute); display: block; margin-bottom: 6px; }
+.wiz input { width: 100%; min-width: 0; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--line); background: var(--well); }
+.wiz select { padding: 6px 9px; border-radius: 9px; border: 1px solid var(--line); background: var(--well); }
+.wiz-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+.wiz-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
+  margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--line); }
+.skip { background: none; border: 0; padding: 6px 0; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
+.skip:hover { color: var(--text); }
+@media (max-width: 640px) { .wiz-fields { grid-template-columns: 1fr; } }
 
 /* ---------- ajustes ---------- */
 .panel { background: var(--shell); border: 1px solid var(--line); border-radius: 16px; padding: 6px 22px 22px; margin-bottom: 20px; }
@@ -239,6 +268,8 @@ pre.log { margin: 14px 0 0; padding: 16px; border-radius: 12px; background: var(
     </nav>
     <button class="go" id="go" data-i18n="go">Copiar agora</button>
   </header>
+
+  <section class="wiz" id="setup" data-i18n-aria="wiz_aria" hidden></section>
 
   <section class="state">
     <h1 id="headline" data-i18n="loading">Lendo o cartão…</h1>
@@ -388,6 +419,30 @@ const I18N = {
     t_pinned: "Versão fixada", t_unpinned: "Versão liberada", t_started: "Cópia iniciada", t_saved: "Ajustes salvos",
     t_hook: "Webhook salvo", t_test: "Teste enviado", t_profile_in: "Perfil no backup", t_profile_out: "Perfil fora do backup",
     t_game_in: "Jogo no backup", t_game_out: "Jogo fora do backup",
+
+    wiz_aria: "Primeiro acesso", wiz_s1: "Console", wiz_s2: "Primeira cópia", wiz_s3: "Avisos",
+    wiz_next: "Continuar", wiz_retry: "Tentar de novo", wiz_finish: "Concluir", wiz_skip: "Pular a configuração",
+    wiz1_h: "Vamos achar o seu PS5",
+    wiz1_p: "O Memcard lê os saves pela rede e nunca grava nada no console. Deixe o PS5 ligado, com o ftpsrv carregado.",
+    wiz1_search: "Procurando o PS5 na rede. Pode levar até um minuto…",
+    wiz1_check: "O que conferir",
+    wiz1_c1: "O PS5 está ligado e o ftpsrv foi carregado depois do desbloqueio.",
+    wiz1_c2: "O PS5 e este computador estão na mesma rede.",
+    wiz1_c3: "No Docker, a busca não enxerga a sua rede sozinha: informe a sub-rede.",
+    wiz1_host: "IP do PS5", wiz1_host_h: "Se você souber. Pode ficar vazio.",
+    wiz1_subnet: "Sub-rede", wiz1_subnet_h: "Como 192.168.1.0/24. Vazio tenta as redes comuns.",
+    wiz2_h: "Primeira cópia",
+    wiz2_p: "O Memcard copia os saves que encontrar. Daqui em diante isso acontece sozinho, sempre que um save mudar.",
+    wiz2_done: "Cópia concluída: {saves} em {profiles}.", profiles_n: ["{n} perfil", "{n} perfis"],
+    wiz2_none: "A cópia terminou, mas nenhum save foi encontrado no console.",
+    wiz2_failed: "A cópia terminou com erros. Os detalhes ficam na aba Registro.",
+    wiz3_h: "Avisos no Discord",
+    wiz3_p: "Opcional. Com um webhook, o Memcard avisa quando o PS5 liga e manda o resumo da sessão quando ele desliga. Dá para configurar depois, em Ajustes.",
+    wiz3_hook: "URL do webhook", wiz3_hook_h: "No Discord: Editar canal, Integrações, Webhooks.",
+    diag_title: "Diagnóstico",
+    diag_p: "Relatório somente leitura do FTP do console, sem nome de perfil, ID nem IP. Cole em uma issue para relatar compatibilidade ou pedir ajuda.",
+    diag_copy: "Copiar diagnóstico", diag_wait: "Gerando…", diag_copied: "Diagnóstico copiado",
+    diag_manual: "Não deu para copiar sozinho. Selecione o texto e copie.",
   },
   en: {
     tab_cards: "Cards", tab_stats: "Dashboard", tab_settings: "Settings", tab_log: "Log",
@@ -507,6 +562,30 @@ const I18N = {
     t_pinned: "Version pinned", t_unpinned: "Version unpinned", t_started: "Backup started", t_saved: "Settings saved",
     t_hook: "Webhook saved", t_test: "Test sent", t_profile_in: "Profile backed up", t_profile_out: "Profile left out",
     t_game_in: "Game backed up", t_game_out: "Game left out",
+
+    wiz_aria: "First-time setup", wiz_s1: "Console", wiz_s2: "First backup", wiz_s3: "Notifications",
+    wiz_next: "Continue", wiz_retry: "Try again", wiz_finish: "Finish", wiz_skip: "Skip setup",
+    wiz1_h: "Let's find your PS5",
+    wiz1_p: "Memcard reads the saves over the network and never writes anything to the console. Keep the PS5 on, with ftpsrv loaded.",
+    wiz1_search: "Looking for the PS5 on the network. This can take up to a minute…",
+    wiz1_check: "What to check",
+    wiz1_c1: "The PS5 is on and ftpsrv was loaded after the jailbreak.",
+    wiz1_c2: "The PS5 and this computer are on the same network.",
+    wiz1_c3: "In Docker, the search can't see your network by itself: enter the subnet.",
+    wiz1_host: "PS5 IP address", wiz1_host_h: "If you know it. It can stay empty.",
+    wiz1_subnet: "Subnet", wiz1_subnet_h: "Like 192.168.1.0/24. Empty tries the common networks.",
+    wiz2_h: "First backup",
+    wiz2_p: "Memcard copies every save it finds. From now on this happens by itself, whenever a save changes.",
+    wiz2_done: "Backup finished: {saves} from {profiles}.", profiles_n: ["{n} profile", "{n} profiles"],
+    wiz2_none: "The backup finished, but no saves were found on the console.",
+    wiz2_failed: "The backup finished with errors. The details are in the Log tab.",
+    wiz3_h: "Discord notifications",
+    wiz3_p: "Optional. With a webhook, Memcard tells you when the PS5 turns on and sends a session summary when it turns off. You can set this up later, in Settings.",
+    wiz3_hook: "Webhook URL", wiz3_hook_h: "In Discord: Edit Channel, Integrations, Webhooks.",
+    diag_title: "Diagnostics",
+    diag_p: "Read-only report of the console's FTP, with no profile name, ID or IP. Paste it into an issue to report compatibility or ask for help.",
+    diag_copy: "Copy diagnostics", diag_wait: "Generating…", diag_copied: "Diagnostics copied",
+    diag_manual: "Couldn't copy it automatically. Select the text and copy it.",
   },
 };
 /* i18n:end */
@@ -532,7 +611,7 @@ function setLang(choice) {
   try { choice ? localStorage.setItem("lang", choice) : localStorage.removeItem("lang"); } catch (e) {}
   lang = I18N[choice] ? choice : autoLang();
   applyStatic();
-  if (data) { render(); if (tab === "settings") renderSettings(); }
+  if (data) { render(); if (tab === "settings") renderSettings(); if (wiz) renderWizard(); }
 }
 
 const mb = b => nf(b / 1048576, b < 10485760 ? 1 : 0) + " MB";
@@ -554,13 +633,18 @@ function toast(msg, err) {
   el.textContent = msg; el.className = "toast show" + (err ? " err" : "");
   clearTimeout(toast.timer); toast.timer = setTimeout(() => el.className = "toast", err ? 6000 : 2600);
 }
-async function post(path, body = {}) {
-  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Lang": lang }, body: JSON.stringify(body) });
-  const j = await r.json();
+async function api(path, body) { // sem corpo é GET
+  let r, j;
+  try {
+    r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json", "X-Lang": lang }, body: JSON.stringify(body) }
+      : { headers: { "X-Lang": lang } });
+    j = await r.json();
+  } catch (e) { throw new Error(t("no_service")); } // rede caiu ou a resposta não é JSON
   if (r.status === 401) location.reload(); // sessão expirou: o servidor mostra a tela de login
   if (!r.ok) throw new Error(j.error || t("failed"));
   return j;
 }
+const post = (path, body = {}) => api(path, body);
 async function act(fn, okMsg) {
   try { const r = await fn(); if (okMsg) toast(okMsg); await refresh(true); return r; }
   catch (e) { toast(e.message, true); }
@@ -582,6 +666,7 @@ const saveOff = s => !s.profile.included || data.titles[s.title]?.excluded;
 
 function render() {
   const st = data.status, tt = data.totals;
+  if (data.setup && !wiz) wizStart();
   $("#headline").innerHTML = tt.versions
     ? tn(tt.saves, "headline", { saves: tn(tt.saves, "saves"), versions: tn(tt.versions, "versions"), size: mb(tt.bytes) })
     : t("headline_none");
@@ -934,7 +1019,122 @@ async function renderLog() {
     <div class="panel"><h3>${t("integrity")}</h3><p>${t("integrity_p")}</p>
       <button class="btn" id="verify">${t("verify_now")}</button> <span id="verifyOut" style="margin-left:10px;color:var(${vf.bad.length ? "--bad" : "--mute"})">${verifying ? t("verifying") : esc(out)}</span>
       <details ${keep ? "open" : ""} style="margin-top:18px"><summary style="cursor:pointer;color:var(--mute)">${t("tech_log")}</summary>
-      <pre class="log">${esc(lines.join("\n")) || t("log_empty")}</pre></details></div>`;
+      <pre class="log">${esc(lines.join("\n")) || t("log_empty")}</pre></details></div>
+    <div class="panel"><h3>${t("diag_title")}</h3><p>${t("diag_p")}</p>${diagBlock()}</div>`;
+}
+
+/* ---------- diagnóstico ---------- */
+let diagText = "", diagBusy = false;
+const diagBlock = () => `<button class="btn" type="button" data-diag ${diagBusy ? "disabled" : ""}>${diagBusy ? t("diag_wait") : t("diag_copy")}</button>
+  ${diagText ? `<pre class="log" style="flex-basis:100%">${esc(diagText)}</pre>` : ""}`;
+function copyText(text) { // navigator.clipboard só existe em https e em localhost, e pode recusar; aí vale o caminho antigo
+  const old = () => {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.cssText = "position:fixed;opacity:0"; document.body.append(ta); ta.select();
+    const ok = document.execCommand("copy"); ta.remove();
+    return ok ? Promise.resolve() : Promise.reject();
+  };
+  return navigator.clipboard ? navigator.clipboard.writeText(text).catch(old) : old();
+}
+const redrawDiag = () => wiz ? renderWizard() : tab === "log" && renderLog();
+async function copyDiag() {
+  diagBusy = true; redrawDiag();
+  try {
+    diagText = (await api("/api/diag")).text;
+    // O texto fica na tela: se o navegador recusar a cópia, ainda dá para selecionar.
+    await copyText(diagText).then(() => toast(t("diag_copied")), () => toast(t("diag_manual"), true));
+  } catch (e) { toast(e.message, true); }
+  diagBusy = false; redrawDiag();
+}
+
+/* ---------- primeiro acesso ---------- */
+// Só abre em instalação vazia (setup: true). Depois de aberto fica até concluir ou pular:
+// a primeira cópia já torna setup falso, e o assistente não pode sumir no meio.
+let wiz = null;
+function wizStart() {
+  wiz = { step: 1, host: data.config.ps5.host, subnet: data.config.ps5.subnet, hook: "" };
+  document.body.classList.add("setup"); $("#setup").hidden = false;
+  wizFind({});
+}
+async function wizFind(body) {
+  wiz.find = "busy"; wiz.err = ""; renderWizard();
+  try { wiz.found = await post("/api/discover", body); wiz.find = "ok"; }
+  catch (e) { if (wiz) { wiz.find = "fail"; wiz.err = e.message; } }
+  if (wiz?.step === 1) renderWizard();
+}
+async function wizCopy() {
+  await refresh(true);
+  Object.assign(wiz, { step: 2, phase: "run", err: "", sawRun: false, base: data.status.last_run, since: Date.now() });
+  renderWizard();
+  clearInterval(wiz.timer);
+  wiz.timer = setInterval(async () => { await refresh(); if (wiz) wizWatch(); }, 1000);
+  if (data.status.running) return; // a cópia de "PS5 ligou" já começou sozinha
+  try { await post("/api/backup"); }
+  catch (e) {
+    await refresh(true);
+    if (wiz?.phase === "run" && !data.status.running) { wiz.phase = "err"; wiz.err = e.message; clearInterval(wiz.timer); renderWizard(); }
+  }
+}
+function wizWatch() { // /api/backup só inicia a cópia; o fim aparece no overview
+  const st = data.status;
+  if (wiz.phase !== "run") return;
+  if (st.running) { wiz.sawRun = true; return; }
+  // ponytail: sem ID de tarefa, o fim é "last_run mudou"; os 10 s cobrem duas rodadas no mesmo segundo
+  if (st.last_run !== wiz.base || wiz.sawRun || Date.now() - wiz.since > 10000) { wiz.phase = "done"; clearInterval(wiz.timer); renderWizard(); }
+}
+async function wizHook(test) {
+  wiz.msg = wiz.err = "";
+  try {
+    if (wiz.hook.trim()) { await post("/api/webhook", { url: wiz.hook }); wiz.msg = t("t_hook"); }
+    if (test) { await post("/api/webhook/test"); wiz.msg = t("t_test"); }
+    return true;
+  } catch (e) { wiz.err = e.message; }
+  finally { renderWizard(); }
+}
+async function wizEnd() { // concluir e pular gravam a mesma coisa
+  try { await post("/api/setup", { done: true }); } catch (e) { return toast(e.message, true); }
+  clearInterval(wiz.timer); wiz = null;
+  document.body.classList.remove("setup"); $("#setup").hidden = true; $("#setup").innerHTML = "";
+  await refresh(true);
+  $(".tabs button").focus();
+}
+function renderWizard() {
+  const s = wiz.step, st = data.status, err = wiz.err ? `<p class="wiz-err" role="alert">${esc(wiz.err)}</p>` : "";
+  const steps = [t("wiz_s1"), t("wiz_s2"), t("wiz_s3")].map((name, i) =>
+    `<li class="${i + 1 < s ? "done" : ""}" ${i + 1 === s ? `aria-current="step"` : ""}><b class="mono">${i + 1}</b>${name}</li>`).join("");
+  let body;
+  if (s === 1) {
+    body = `<h2 tabindex="-1">${t("wiz1_h")}</h2><p>${t("wiz1_p")}</p>` + (
+      wiz.find === "busy" ? `<p class="wiz-out" role="status"><span class="led on"></span>${t("wiz1_search")}</p>`
+      : wiz.find === "ok" ? `<p class="wiz-out" role="status"><span class="led on"></span>${esc(t("t_found", wiz.found))}</p>
+        <div class="wiz-acts"><button class="go" id="wizCopy">${t("wiz_next")}</button></div>`
+      : `${err}<div class="note"><b>${t("wiz1_check")}</b><ul><li>${t("wiz1_c1")}</li><li>${t("wiz1_c2")}</li><li>${t("wiz1_c3")}</li></ul></div>
+        <form id="wizFind"><div class="wiz-fields">
+          <label><b>${t("wiz1_host")}</b><small>${t("wiz1_host_h")}</small><input type="text" data-wiz="host" value="${esc(wiz.host)}" inputmode="decimal" autocomplete="off"></label>
+          <label><b>${t("wiz1_subnet")}</b><small>${t("wiz1_subnet_h")}</small><input type="text" data-wiz="subnet" value="${esc(wiz.subnet)}" autocomplete="off"></label></div>
+          <div class="wiz-acts"><button class="go">${t("wiz_retry")}</button>${diagBlock()}</div></form>`);
+  } else if (s === 2) {
+    const found = data.profiles.reduce((n, p) => n + p.saves.length, 0), ok = st.last_run && st.last_ok === st.last_run;
+    const list = data.profiles.map(p => `<div class="row"><b>${esc(p.name)}</b><span>${tn(p.saves.length, "saves")}</span></div>`).join("");
+    body = `<h2 tabindex="-1">${t("wiz2_h")}</h2><p>${t("wiz2_p")}</p>` + (
+      wiz.phase === "run" ? `<p class="wiz-out" role="status"><span class="led on"></span>${t("st_running")}</p>
+        <div class="wiz-acts"><button class="go" disabled>${t("wiz_next")}</button></div>`
+      : wiz.phase === "err" ? `${err}<div class="wiz-acts"><button class="go" id="wizCopy">${t("wiz_retry")}</button></div>`
+      : `<p class="${ok ? "wiz-out" : "wiz-err"}" role="status">${!ok ? t("wiz2_failed") : found
+          ? t("wiz2_done", { saves: tn(found, "saves"), profiles: tn(data.profiles.length, "profiles_n") }) : t("wiz2_none")}</p>${list}
+        <div class="wiz-acts"><button class="go" id="wizNext">${t("wiz_next")}</button>${ok ? "" : `<button class="btn" id="wizCopy">${t("wiz_retry")}</button>`}</div>`);
+  } else {
+    body = `<h2 tabindex="-1">${t("wiz3_h")}</h2><p>${t("wiz3_p")}</p>
+      <form id="wizHook"><div class="wiz-fields one"><label><b>${t("wiz3_hook")}</b><small>${t("wiz3_hook_h")}</small>
+        <input type="password" data-wiz="hook" value="${esc(wiz.hook)}" placeholder="https://discord.com/api/webhooks/…" autocomplete="off"></label></div>
+        ${err}${wiz.msg ? `<p role="status" style="margin:12px 0 0;color:var(--ok)">${esc(wiz.msg)}</p>` : ""}
+        <div class="wiz-acts"><button class="btn">${t("save")}</button><button class="btn" type="button" id="wizTest">${t("send_test")}</button></div></form>
+      <div class="wiz-acts"><button class="go" id="wizDone">${t("wiz_finish")}</button></div>`;
+  }
+  $("#setup").innerHTML = `<ol class="wiz-steps">${steps}</ol>${body}
+    <div class="wiz-foot"><button class="skip" id="wizSkip">${t("wiz_skip")}</button>
+      <select id="uiLang" aria-label="${esc(t("ui_lang"))}">${LANG_NAMES.map(([v, label]) => `<option value="${v}" ${lang === v ? "selected" : ""}>${label}</option>`).join("")}</select></div>`;
+  $("#setup h2").focus(); // o conteúdo trocou: teclado e leitor de tela continuam daqui
 }
 
 /* ---------- eventos ---------- */
@@ -966,6 +1166,12 @@ document.addEventListener("click", async e => {
     else { el.disabled = false; el.textContent = t("find_ps5"); }
   }
   else if (el.id === "hookTest") act(() => post("/api/webhook/test"), t("t_test"));
+  else if (el.dataset.diag !== undefined) copyDiag();
+  else if (el.id === "wizCopy") wizCopy();
+  else if (el.id === "wizNext") { wiz.step = 3; wiz.err = ""; renderWizard(); }
+  else if (el.id === "wizTest") wizHook(true);
+  else if (el.id === "wizDone") { if (await wizHook(false)) wizEnd(); }
+  else if (el.id === "wizSkip") wizEnd();
   else if (el.id === "verify") {
     verifying = true; $("#verifyOut").textContent = t("verifying");
     try { await post("/api/verify"); } catch (err) { toast(err.message, true); }
@@ -982,7 +1188,15 @@ document.addEventListener("change", e => {
     act(() => post("/api/title", { id: el.dataset.title, excluded: !el.checked }), el.checked ? t("t_game_in") : t("t_game_out"));
   } else if (el.dataset.path) formDirty = true;
 });
-document.addEventListener("input", e => { if (e.target.dataset.path) formDirty = true; });
+document.addEventListener("input", e => {
+  if (e.target.dataset.path) formDirty = true;
+  if (wiz && e.target.dataset.wiz) wiz[e.target.dataset.wiz] = e.target.value; // sobrevive ao redesenho
+});
+document.addEventListener("submit", e => {
+  e.preventDefault();
+  if (e.target.id === "wizFind") wizFind({ host: wiz.host, subnet: wiz.subnet });
+  else if (e.target.id === "wizHook") wizHook(false);
+});
 document.addEventListener("toggle", e => {
   const d = e.target;
   if (d.dataset?.save) d.open ? openSaves.add(d.dataset.save) : openSaves.delete(d.dataset.save);

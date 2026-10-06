@@ -46,7 +46,7 @@ def storage_paths():
     return Path(os.environ.get("PS5BACKUP_CONFIG", config)), Path(os.environ.get("PS5BACKUP_DATA", data))
 
 
-VERSION = "0.6.0"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
+VERSION = "0.7.0"  # mantenha igual ao topo do CHANGELOG.md (um teste confere)
 CONFIG_PATH, DATA_DIR = storage_paths()
 SAVES_DIR = DATA_DIR / "saves"
 ART_DIR = DATA_DIR / "cache" / "art"

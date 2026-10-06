@@ -10,6 +10,15 @@ release (`0.Y.0`) may change `config.toml` keys; anything that does is listed un
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-06
+
+### Added
+- First-run wizard in the web interface: finds the PS5 (with IP and subnet fields and
+  guidance when the search fails), runs the first backup and sets up Discord notifications.
+  Shown only while there is no data; it can be skipped at any step.
+- `POST /api/setup` and the `setup` field in `/api/overview`, which tell whether the wizard should show.
+- "Copy diagnostics" button in the Log tab and in the wizard, when the PS5 is not found.
+
 ## [0.6.0] - 2026-10-05
 
 ### Added
@@ -119,7 +128,8 @@ First release.
 - Dashboard: console usage map, estimated play time, space per game and a 12-month
   projection simulated with the real retention rules.
 
-[Unreleased]: https://github.com/bps2414/memcard/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/bps2414/memcard/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/bps2414/memcard/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/bps2414/memcard/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/bps2414/memcard/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/bps2414/memcard/compare/v0.4.1...v0.4.2
