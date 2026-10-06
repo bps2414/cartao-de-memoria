@@ -2,10 +2,12 @@
 import datetime as dt
 import json
 import os
+import shutil
 import threading
 import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from http.server import ThreadingHTTPServer
 from unittest import mock
 
@@ -85,6 +87,69 @@ class NoPassword(WebCase):
         self.assertEqual(self.call("/api/pin", {**target, "stamp": "../x", "pinned": True})[0], 400)
 
 
+class Setup(WebCase):
+    def setUp(self):
+        super().setUp()
+        shutil.rmtree(core.SAVES_DIR / "1a2b3c4d")
+
+    def test_empty_installation_needs_setup(self):
+        status, body, _ = self.call("/api/overview")
+        self.assertEqual(status, 200)
+        self.assertIs(json.loads(body)["setup"], True)
+
+    def test_known_profile_does_not_need_setup(self):
+        state = core.load_state()
+        state["profiles"]["1a2b3c4d"] = ""
+        core.save_json(core.STATE_FILE, state)
+        self.assertIs(json.loads(self.call("/api/overview")[1])["setup"], False)
+
+    def test_stored_version_without_profile_does_not_need_setup(self):
+        self.add_version(WHEN)
+        self.assertFalse(core.load_state()["profiles"])
+        self.assertIs(json.loads(self.call("/api/overview")[1])["setup"], False)
+
+    def test_completion_is_persisted_and_hides_setup(self):
+        status, body, _ = self.call("/api/setup", {"done": True})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        self.assertIs(json.loads(core.STATE_FILE.read_text(encoding="utf-8"))["meta"]["setup_done"], True)
+        self.assertIs(json.loads(self.call("/api/overview")[1])["setup"], False)
+
+    def test_completion_preserves_state_updated_when_lock_is_acquired(self):
+        state = core.load_state()
+        state["meta"]["last_ok"] = "2026-01-01 00:00:00"
+        state["profiles"]["1a2b3c4d"] = "João"
+        state["files"]["save"] = {"version": stamp(WHEN)}
+        state["titles"]["PPSA00001"] = "Jogo"
+        state["session"] = {"started": 123}
+        state["extra"] = {"keep": True}
+        core.save_json(core.STATE_FILE, state)
+        locked = core.locked
+
+        @contextmanager
+        def updated_locked():
+            with locked():
+                state["meta"]["last_run"] = "2026-01-01 00:01:00"
+                core.save_json(core.STATE_FILE, state)
+                yield
+
+        with mock.patch.object(core, "locked", updated_locked):
+            self.assertEqual(self.call("/api/setup", {"done": True})[0], 200)
+        state["meta"]["setup_done"] = True
+        self.assertEqual(json.loads(core.STATE_FILE.read_text(encoding="utf-8")), state)
+        self.assertEqual(self.call("/api/setup", {"done": True})[0], 200)
+        self.assertEqual(core.load_state(), state)
+
+    def test_completion_requires_boolean_true(self):
+        for body in ({}, {"done": False}, {"done": 1}, {"done": "true"}, {"done": None}):
+            with self.subTest(body=body):
+                status, response, _ = self.call("/api/setup", body)
+                self.assertEqual(status, 400)
+                self.assertEqual(json.loads(response), {"error": web.tr("pt-BR", "e_send_json")})
+                self.assertFalse(core.STATE_FILE.exists())
+        self.assertIs(json.loads(self.call("/api/overview")[1])["setup"], True)
+
+
 class WithPassword(WebCase):
     password = "correta-cavalo-bateria"
 
@@ -109,6 +174,18 @@ class WithPassword(WebCase):
         self.assertTrue(json.loads(self.call("/api/overview", cookie=cookie)[1])["auth"])
         self.assertEqual(self.call(self.download, cookie=cookie)[1], b"conteudo do save")
         self.assertIn(b"i18n:start", self.call("/", cookie=cookie)[1])
+
+    def test_setup_requires_login(self):
+        status, body, _ = self.call("/api/setup", {"done": True})
+        self.assertEqual(status, 401)
+        self.assertEqual(json.loads(body), {"error": web.tr("pt-BR", "e_auth")})
+        self.assertFalse(core.STATE_FILE.exists())
+        status, cookie = self.login(self.password)
+        self.assertEqual(status, 200)
+        status, body, _ = self.call("/api/setup", {"done": True}, cookie=cookie)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"ok": True})
+        self.assertIs(core.load_state()["meta"]["setup_done"], True)
 
     def test_wrong_password_and_forged_cookies(self):
         self.assertEqual(self.login("errada")[0], 401)

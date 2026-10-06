@@ -103,6 +103,7 @@ def overview():
                    "over_limit": bool(cfg["retention"]["warn_total_gb"])
                    and total_bytes > cfg["retention"]["warn_total_gb"] * 1024 ** 3},
         "profiles": profiles, "titles": titles, "config": cfg,
+        "setup": "setup_done" not in state["meta"] and not state["profiles"] and not total_versions,
         "webhook": {"set": bool(url), "discord": core.is_discord(url)},
         "session_open": bool(state["session"]), "auth": bool(password()),
         "verify": {"at": state["meta"].get("last_verify"), "ok": state["meta"].get("last_verify_ok", 0),
@@ -271,6 +272,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def route_post(self, path, body):
         cfg = core.load_config()
+        if path == "/api/setup":
+            if body.get("done") is not True:
+                raise Msg("e_send_json")
+            with core.locked():
+                state = core.load_state()
+                state["meta"]["setup_done"] = True
+                core.save_json(core.STATE_FILE, state)
+            return {"ok": True}
         if path == "/api/backup":
             if core.STATUS["running"]:
                 raise Msg("e_busy")
