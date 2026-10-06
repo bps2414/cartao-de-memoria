@@ -281,7 +281,7 @@ the `sdimg_...` image without editing its contents. Keep each version in its own
 **TO FILL IN AFTER TESTING:** how to identify the main save and files that must
 be restored together for the tested game; how to handle `sce_bu_`.
 
-<!-- PRINT: final guide, chosen history version and downloaded file -->
+![A save's history in Memcard, with example data: two versions, the latest pinned, and the Download button](history.en.jpg)
 
 ### 3. Import manually through Garlic
 

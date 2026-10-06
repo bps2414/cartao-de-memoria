@@ -279,7 +279,7 @@ Escolha a versão pela data e pelo progresso que quer recuperar; baixe a imagem
 **A PREENCHER DEPOIS DO TESTE:** como reconhecer o save principal e os arquivos
 que precisam ser restaurados juntos no jogo testado; tratamento de `sce_bu_`.
 
-<!-- PRINT: guia final, versão escolhida no histórico e arquivo baixado -->
+![Histórico de um save no Memcard, com dados de exemplo: duas versões, a mais recente fixada, e o botão Baixar](historico.jpg)
 
 ### 3. Importar manualmente pelo Garlic
 
