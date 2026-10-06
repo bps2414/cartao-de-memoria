@@ -55,6 +55,8 @@ ficar com ele, que também é a ferramenta indicada abaixo para restaurar saves.
 
 Primeira vez? Siga o [guia de instalação em 5 minutos](docs/guia.md), com os
 caminhos Windows e Docker, a primeira cópia e os avisos no Discord.
+Quer entender como o projeto funciona por dentro? Leia a
+[arquitetura explicada](docs/arquitetura.md), escrita para quem não programa.
 
 ```sh
 git clone https://github.com/bps2414/memcard.git
