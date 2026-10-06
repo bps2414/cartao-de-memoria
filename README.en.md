@@ -54,6 +54,9 @@ stick with it; it is also the tool recommended below for restoring saves.
 
 ## Installation
 
+First time? Follow the [five-minute setup guide](docs/guide.en.md) for Windows
+or Docker, your first backup and Discord notifications.
+
 ```sh
 git clone https://github.com/bps2414/memcard.git
 cd memcard

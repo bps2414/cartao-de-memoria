@@ -53,6 +53,9 @@ ficar com ele, que também é a ferramenta indicada abaixo para restaurar saves.
 
 ## Instalação
 
+Primeira vez? Siga o [guia de instalação em 5 minutos](docs/guia.md), com os
+caminhos Windows e Docker, a primeira cópia e os avisos no Discord.
+
 ```sh
 git clone https://github.com/bps2414/memcard.git
 cd memcard
