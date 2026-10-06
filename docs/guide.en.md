@@ -36,9 +36,10 @@ Keep the PC on while you want automatic backups. Choose **Windows** or
 3. Double-click `memcard.exe`. It is not digitally signed. If you see
    **Windows protected your PC**, after checking the hash use
    **More info › Run anyway**.
-4. A console window stays open and your browser shows **Cards** at
+4. A console window stays open and your browser opens
    `http://127.0.0.1:8765`. If the browser does not open, enter that address.
-   Before the first backup, the page may say no profiles have been read yet.
+   The first time, a wizard finds the PS5, runs the first backup and sets up
+   notifications; you can skip it and adjust everything later in **Settings**.
 5. Keep the console window open. Closing it stops the service.
    Opening the executable again while it is running only reopens the interface.
 

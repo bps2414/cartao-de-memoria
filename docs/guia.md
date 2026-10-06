@@ -36,9 +36,10 @@ Deixe o PC ligado enquanto quiser cópias automáticas. Escolha **Windows** ou
 3. Dê dois cliques em `memcard.exe`. Ele não tem assinatura digital. Se aparecer
    **O Windows protegeu o computador**, depois de conferir o hash use
    **Mais informações › Executar assim mesmo**.
-4. Uma janela de console fica aberta e o navegador mostra os **Cartões** em
+4. Uma janela de console fica aberta e o navegador abre
    `http://127.0.0.1:8765`. Se o navegador não abrir, digite esse endereço.
-   Sem a primeira cópia, a tela pode dizer que ainda não leu nenhum perfil.
+   Na primeira vez, um assistente acha o PS5, faz a primeira cópia e configura
+   os avisos; dá para pular e ajustar tudo depois em **Ajustes**.
 5. Mantenha a janela de console aberta. Fechá-la encerra o serviço.
    Abrir o executável de novo, com ele já rodando, só reabre a interface.
 
